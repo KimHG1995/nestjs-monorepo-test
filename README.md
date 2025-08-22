@@ -4,7 +4,7 @@
 
 ## 주요 기술 스택
 
-- **프레임워크**: [NestJS](https://nestjs.com/) (Monorepo)
+- **프레임워크**: [NestJS](https://nestjs.com/) (Monorepo) + **SWC**
 - **언어**: [TypeScript](https://www.typescriptlang.org/)
 - **API 문서화**: [Swagger (OpenAPI)](https://swagger.io/)
 - **데이터 유효성 검사**: [Zod](https://zod.dev/) 및 `nestjs-zod`
@@ -26,13 +26,9 @@
 │   ├── api-server/       # 외부 요청을 받는 API 서버 (이벤트 발행자)
 │   └── activity-worker/  # SQS 메시지를 처리하는 워커 (이벤트 소비자)
 ├── libs/
+│   ├── common-utils/     # 전역 필터, 인터셉터 등 공용 유틸리티
 │   └── sqs-client/       # SQS 통신을 위한 공용 라이브러리
 ├── .vscode/              # VSCode 워크스페이스 설정
-│   ├── extensions.json   # 추천 확장 프로그램
-│   └── settings.json     # 워크스페이스 설정 (포맷팅, 린팅)
-├── .editorconfig         # 편집기 설정
-├── .prettierrc           # Prettier 설정
-├── eslint.config.mjs     # ESLint 플랫 설정 (최신)
 └── ...
 ```
 
@@ -43,7 +39,8 @@
 
 ### 라이브러리
 
-- **`sqs-client`**: AWS SQS v3 SDK를 사용하여 메시지 송/수신 로직을 캡슐화한 공용 라이브러리입니다. FIFO 큐의 `MessageGroupId`와 `MessageDeduplicationId`를 활용하도록 설계되었습니다.
+- **`common-utils`**: 전역 예외 필터(RFC 7807 표준)와 응답 정형화 인터셉터를 제공하여 API의 일관성을 유지합니다.
+- **`sqs-client`**: AWS SQS v3 SDK를 사용하여 메시지 송/수신 로직을 캡슐화한 공용 라이브러리입니다.
 
 ---
 
@@ -57,34 +54,25 @@
 
 ### 1. 의존성 설치
 
-프로젝트 루트에서 다음 명령어를 실행하여 모든 의존성을 설치합니다.
-
 ```bash
 npm install
 ```
 
 ### 2. 애플리케이션 실행
 
-각 애플리케이션은 별도의 터미널에서 실행해야 합니다.
-
 **터미널 1: `api-server` 실행**
 
 ```bash
 npm run start:dev api-server
 ```
-- API 서버는 `http://localhost:3000`에서 실행됩니다.
-- Swagger API 문서는 `http://localhost:3000/api-docs`에서 확인할 수 있습니다.
 
 **터미널 2: `activity-worker` 실행**
 
 ```bash
 npm run start:dev activity-worker
 ```
-- 워커가 시작되면 SQS 큐를 폴링하기 시작합니다.
 
 ### 3. E2E 테스트 실행
-
-`api-server`의 엔드포인트를 테스트하려면 다음 명령어를 실행하세요.
 
 ```bash
 npm run test:e2e -- --config apps/api-server/test/jest-e2e.json
@@ -98,15 +86,32 @@ npm run test:e2e -- --config apps/api-server/test/jest-e2e.json
 
 ### 코드 스타일 및 품질
 
-- **포매팅**: `prettier --write .` 또는 `npm run format` 명령어로 전체 코드의 서식을 맞출 수 있습니다.
-- **린팅**: `eslint . --fix` 또는 `npm run lint` 명령어로 코드 품질 문제를 검사하고 자동으로 수정할 수 있습니다.
+- **포매팅**: `npm run format`
+- **린팅**: `npm run lint`
 
 ### 추천 VSCode 확장 프로그램
-
-VSCode를 사용하는 경우, `.vscode/extensions.json`에 정의된 다음 확장 프로그램을 설치하면 개발 효율성이 크게 향상됩니다.
 
 - **EditorConfig for VS Code** (`EditorConfig.EditorConfig`)
 - **ESLint** (`dbaeumer.vscode-eslint`)
 - **Prettier - Code formatter** (`esbenp.prettier-vscode`)
 
-`.vscode/settings.json` 덕분에 파일을 저장할 때마다 Prettier와 ESLint가 자동으로 실행됩니다.
+---
+
+## 향후 개선 계획 (TODO)
+
+- [ ] **데이터베이스 연동 (Prisma)**
+  - `libs`에 `prisma-client` 라이브러리(서브모듈)를 추가하여 데이터베이스 스키마 및 클라이언트를 중앙에서 관리합니다.
+  - `activity-worker`가 SQS 메시지를 받아 실제 데이터베이스에 사용자 활동을 기록하도록 로직을 수정합니다.
+
+- [ ] **ERD (Entity-Relationship Diagram) 자동 생성**
+  - Prisma 스키마가 변경될 때마다 `prisma-erd-generator`와 같은 도구를 사용하여 ERD를 자동으로 업데이트하는 워크플로우를 구축합니다.
+
+- [ ] **CI/CD 파이프라인 구축**
+  - **CI (Continuous Integration)**: GitHub Actions를 사용하여 Pull Request 생성 시 자동으로 빌드, 린트, 테스트를 실행합니다.
+  - **CD (Continuous Deployment)**: Main 브랜치에 머지될 때, Docker 이미지를 빌드하여 Amazon ECR에 푸시하고, ECS 또는 EKS에 자동으로 배포하는 파이프라인을 구축합니다.
+
+- [ ] **설정 관리 (ConfigModule)**
+  - NestJS의 `ConfigModule`을 도입하여 환경 변수(`.env`)를 타입 세이프하게 관리하고, 각 애플리케이션에 주입합니다.
+
+- [ ] **로깅 시스템 개선**
+  - `winston`이나 `pino` 같은 로깅 라이브러리를 도입하여 로그 레벨 관리, 로그 포맷 통일, 파일 로깅 등을 구현합니다.
