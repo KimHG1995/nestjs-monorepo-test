@@ -1,0 +1,10 @@
+{
+  // 파일을 저장할 때마다 자동으로 포맷을 맞춥니다.
+  "editor.formatOnSave": true,
+  // Prettier를 기본 포맷터로 사용합니다.
+  "editor.defaultFormatter": "esbenp.prettier-vscode",
+  // ESLint가 플랫 설정 파일(eslint.config.mjs)을 사용하도록 설정합니다.
+  "eslint.useFlatConfig": true,
+  // 다음 언어에 대해 ESLint 검사를 활성화합니다.
+  "eslint.validate": ["javascript", "typescript"]
+}

@@ -1,0 +1,10 @@
+{
+  "recommendations": [
+    // EditorConfig 설정을 VSCode에 적용합니다.
+    "EditorConfig.EditorConfig",
+    // ESLint 통합을 제공합니다.
+    "dbaeumer.vscode-eslint",
+    // Prettier 코드 포맷터 통합을 제공합니다.
+    "esbenp.prettier-vscode"
+  ]
+}
