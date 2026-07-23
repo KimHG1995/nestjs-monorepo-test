@@ -506,7 +506,7 @@ Expected: `TypeScript noImplicitAny policies: PASS`.
 Run:
 
 ```bash
-node -e "const {FlatESLint}=require('eslint/use-at-your-own-risk'); (async()=>{const eslint=new FlatESLint(); const [result]=await eslint.lintText('const payload: any = {};\nvoid payload;\n',{filePath:'apps/no-explicit-any.probe.ts'}); const violation=result.messages.some(message=>message.ruleId==='@typescript-eslint/no-explicit-any'); if(!violation) process.exit(1); console.log('Explicit any probe: REJECTED')})().catch(error=>{console.error(error);process.exit(1)})"
+node -e "const {FlatESLint}=require('eslint/use-at-your-own-risk'); (async()=>{const eslint=new FlatESLint(); const [result]=await eslint.lintText('const payload: any = {};\nvoid payload;\n',{filePath:'apps/api-server/src/api-server.service.ts'}); const violation=result.messages.some(message=>message.ruleId==='@typescript-eslint/no-explicit-any'); if(!violation) process.exit(1); console.log('Explicit any probe: REJECTED')})().catch(error=>{console.error(error);process.exit(1)})"
 ```
 
 Expected: `Explicit any probe: REJECTED` without creating a probe file.
