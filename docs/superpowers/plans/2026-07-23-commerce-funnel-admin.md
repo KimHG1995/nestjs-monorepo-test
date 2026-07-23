@@ -1208,7 +1208,7 @@ mise exec -- npx eslint apps/web-server/src/admin
 
 Expected: calculator and service tests pass; typecheck and ESLint exit 0.
 
-- [ ] **Step 8: Commit**
+- [x] **Step 8: Commit**
 
 ```bash
 git add apps/web-server/src/admin
@@ -1230,7 +1230,7 @@ git commit -m "feat(web): add product funnel analytics"
 - Removes: all `/widgets` routes and in-memory storage.
 - Verifies: product and funnel routes still use the common success envelope and RFC 7807 errors.
 
-- [ ] **Step 1: Rewrite the e2e fixture to expect database features**
+- [x] **Step 1: Rewrite the e2e fixture to expect database features**
 
 In `web-server.e2e-spec.ts`, provide a Prisma test double:
 
@@ -1332,7 +1332,7 @@ it('GET /admin/analytics/funnel은 퍼널 지표를 성공 봉투로 반환한�
 
 Retain the `/health` no-envelope test.
 
-- [ ] **Step 2: Run e2e and confirm RED**
+- [x] **Step 2: Run e2e and confirm RED**
 
 Run:
 
@@ -1342,7 +1342,7 @@ mise exec -- npx jest --config apps/web-server/test/jest-e2e.json --runInBand
 
 Expected: FAIL because product and analytics modules are not imported.
 
-- [ ] **Step 3: Connect `web-server` to validated database config**
+- [x] **Step 3: Connect `web-server` to validated database config**
 
 Change `webServerEnvSchema` to:
 
@@ -1377,7 +1377,7 @@ imports: [
 
 Delete `WidgetsModule` import and delete `apps/web-server/src/widgets/**`.
 
-- [ ] **Step 4: Verify web-server e2e and all affected tests**
+- [x] **Step 4: Verify web-server e2e and all affected tests**
 
 Run:
 

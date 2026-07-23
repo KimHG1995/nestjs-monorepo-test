@@ -9,6 +9,7 @@
   "moduleNameMapper": {
     "^@app/common-utils(|/.*)$": "<rootDir>/../../../libs/common-utils/src$1",
     "^@app/config(|/.*)$": "<rootDir>/../../../libs/config/src$1",
-    "^@app/logger(|/.*)$": "<rootDir>/../../../libs/logger/src$1"
+    "^@app/logger(|/.*)$": "<rootDir>/../../../libs/logger/src$1",
+    "^@app/prisma-client(|/.*)$": "<rootDir>/../../../libs/prisma-client/src$1"
   }
 }
