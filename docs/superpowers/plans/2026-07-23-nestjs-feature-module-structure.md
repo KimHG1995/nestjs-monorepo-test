@@ -161,7 +161,7 @@ mise exec -- npx eslint apps/api-server
 
 Expected: 2 tests pass, TypeScript exits 0, and ESLint reports no errors.
 
-- [ ] **Step 7: Commit**
+- [x] **Step 7: Commit**
 
 ```bash
 git add apps/api-server
@@ -183,7 +183,7 @@ git commit -m "refactor(api-server): organize activity feature module"
 - Consumes: `SqsClientModule`, `PrismaModule`, global `ConfigService<ActivityWorkerEnv>`.
 - Preserves: module-init polling, activity validation, persistence, retry, and deletion semantics.
 
-- [ ] **Step 1: Move and rename the consumer service**
+- [x] **Step 1: Move and rename the consumer service**
 
 Move the implementation and make these exact substitutions:
 
@@ -196,7 +196,7 @@ new Logger(ActivityWorkerService.name) → new Logger(ActivityConsumerService.na
 Do not change `onModuleInit`, `startPolling`, `processMessage`,
 `deleteIfPossible`, or `stopPolling` behavior.
 
-- [ ] **Step 2: Add the consumer feature module**
+- [x] **Step 2: Add the consumer feature module**
 
 Create `activity-consumer.module.ts`:
 
@@ -215,7 +215,7 @@ import { ActivityConsumerService } from './activity-consumer.service';
 export class ActivityConsumerModule {}
 ```
 
-- [ ] **Step 3: Simplify the worker root module**
+- [x] **Step 3: Simplify the worker root module**
 
 Keep `TypedConfigModule.forRoot(activityWorkerEnvSchema)` and
 `AppLoggerModule.forRoot()` in `ActivityWorkerModule`. Replace direct
@@ -229,13 +229,13 @@ imports: [
 ];
 ```
 
-- [ ] **Step 4: Move and update the unit test**
+- [x] **Step 4: Move and update the unit test**
 
 Move the test next to the consumer service and replace all
 `ActivityWorkerService` references with `ActivityConsumerService`.
 Keep all four persistence, product relation, invalid-message, and retry tests.
 
-- [ ] **Step 5: Verify the worker feature**
+- [x] **Step 5: Verify the worker feature**
 
 Run:
 

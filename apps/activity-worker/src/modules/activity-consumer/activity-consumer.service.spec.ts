@@ -5,10 +5,10 @@ import { Test } from '@nestjs/testing';
 import { PrismaService } from '@app/prisma-client';
 import { SqsClientService } from '@app/sqs-client';
 
-import { ActivityWorkerService } from './activity-worker.service';
+import { ActivityConsumerService } from './activity-consumer.service';
 
-describe('ActivityWorkerService', () => {
-  let service: ActivityWorkerService;
+describe('ActivityConsumerService', () => {
+  let service: ActivityConsumerService;
 
   const mockSqs = { deleteMessage: jest.fn(), receiveMessages: jest.fn() };
   const mockPrisma = { userActivity: { create: jest.fn() } };
@@ -18,14 +18,14 @@ describe('ActivityWorkerService', () => {
   beforeEach(async () => {
     const moduleRef = await Test.createTestingModule({
       providers: [
-        ActivityWorkerService,
+        ActivityConsumerService,
         { provide: SqsClientService, useValue: mockSqs },
         { provide: PrismaService, useValue: mockPrisma },
         { provide: ConfigService, useValue: mockConfig },
       ],
     }).compile();
 
-    service = moduleRef.get(ActivityWorkerService);
+    service = moduleRef.get(ActivityConsumerService);
     jest.clearAllMocks();
   });
 

@@ -6,14 +6,14 @@ import { ActivityEventSchema } from '@app/common-utils';
 import { PrismaService } from '@app/prisma-client';
 import { SqsClientService } from '@app/sqs-client';
 
-import type { ActivityWorkerEnv } from './config/env';
+import type { ActivityWorkerEnv } from '../../config/env';
 
 /**
  * SQS 큐를 폴링하여 메시지를 수신하고, 유효성 검증 후 데이터베이스에 적재하는 워커입니다.
  */
 @Injectable()
-export class ActivityWorkerService implements OnModuleInit {
-  private readonly logger = new Logger(ActivityWorkerService.name);
+export class ActivityConsumerService implements OnModuleInit {
+  private readonly logger = new Logger(ActivityConsumerService.name);
   private isPolling = true;
 
   constructor(
