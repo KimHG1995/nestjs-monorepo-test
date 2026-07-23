@@ -1,4 +1,5 @@
 import { Module } from '@nestjs/common';
+
 import { SqsClientService } from './sqs-client.service';
 
 @Module({
