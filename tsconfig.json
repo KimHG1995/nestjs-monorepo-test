@@ -18,18 +18,16 @@
     "forceConsistentCasingInFileNames": false,
     "noFallthroughCasesInSwitch": false,
     "paths": {
-      "@app/sqs-client": [
-        "libs/sqs-client/src"
-      ],
-      "@app/sqs-client/*": [
-        "libs/sqs-client/src/*"
-      ],
-      "@app/common-utils": [
-        "libs/common-utils/src"
-      ],
-      "@app/common-utils/*": [
-        "libs/common-utils/src/*"
-      ]
+      "@app/sqs-client": ["libs/sqs-client/src"],
+      "@app/sqs-client/*": ["libs/sqs-client/src/*"],
+      "@app/common-utils": ["libs/common-utils/src"],
+      "@app/common-utils/*": ["libs/common-utils/src/*"],
+      "@app/config": ["libs/config/src"],
+      "@app/config/*": ["libs/config/src/*"],
+      "@app/logger": ["libs/logger/src"],
+      "@app/logger/*": ["libs/logger/src/*"],
+      "@app/prisma-client": ["libs/prisma-client/src"],
+      "@app/prisma-client/*": ["libs/prisma-client/src/*"]
     }
   }
 }

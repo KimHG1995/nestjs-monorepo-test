@@ -1,0 +1,39 @@
+{
+  // ─────────────────────────────────────────────────────────────────────────
+  // Go 네이티브 TypeScript(tsgo, TS 7)용 타입체크 전용 설정입니다.
+  // `npm run typecheck` → `tsgo --noEmit -p tsconfig.typecheck.json`
+  //
+  // TS 7 은 `baseUrl` 을 제거했고 `paths` 값이 상대경로여야 하므로, 기존 툴체인
+  // (webpack/ts-loader·ts-jest·typescript-eslint, 모두 TS 5 기반)이 쓰는
+  // tsconfig.json 과 분리하여 별도로 둡니다. (그쪽은 그대로 baseUrl 유지)
+  // ─────────────────────────────────────────────────────────────────────────
+  "compilerOptions": {
+    "module": "commonjs",
+    "target": "ES2021",
+    "emitDecoratorMetadata": true,
+    "experimentalDecorators": true,
+    "allowSyntheticDefaultImports": true,
+    "skipLibCheck": true,
+    "strictNullChecks": false,
+    "noImplicitAny": false,
+    "strictBindCallApply": false,
+    "forceConsistentCasingInFileNames": false,
+    "noFallthroughCasesInSwitch": false,
+    "noEmit": true,
+    "paths": {
+      "@app/sqs-client": ["./libs/sqs-client/src"],
+      "@app/sqs-client/*": ["./libs/sqs-client/src/*"],
+      "@app/common-utils": ["./libs/common-utils/src"],
+      "@app/common-utils/*": ["./libs/common-utils/src/*"],
+      "@app/config": ["./libs/config/src"],
+      "@app/config/*": ["./libs/config/src/*"],
+      "@app/logger": ["./libs/logger/src"],
+      "@app/logger/*": ["./libs/logger/src/*"],
+      "@app/prisma-client": ["./libs/prisma-client/src"],
+      "@app/prisma-client/*": ["./libs/prisma-client/src/*"]
+    }
+  },
+  // 운영 소스만 대상으로 합니다. 테스트 파일은 `npm test`(ts-jest)에서 타입 검사됩니다.
+  "include": ["apps/**/*.ts", "libs/**/*.ts"],
+  "exclude": ["node_modules", "dist", "**/*.spec.ts", "**/*.e2e-spec.ts"]
+}

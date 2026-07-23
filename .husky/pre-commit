@@ -1,0 +1,7 @@
+# 커밋 전에 아래를 강제 실행하고, 하나라도 실패하면 커밋을 중단합니다.
+#   1) 스테이징된 파일에 ESLint(--fix) + Prettier
+#   2) Go 네이티브 TypeScript(tsgo) 로 프로젝트 전체 타입 검사 (tsc --noEmit 상당)
+#   3) 단위 테스트
+npx lint-staged
+npm run typecheck
+npm test

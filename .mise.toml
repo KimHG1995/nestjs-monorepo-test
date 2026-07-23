@@ -1,0 +1,8 @@
+# mise 를 사용하면 이 디렉터리에 진입할 때 아래 버전으로 자동 전환됩니다.
+# 설치/활성화:  mise install  &&  mise use
+[tools]
+node = "24.18.0"  # 최신 LTS
+
+[env]
+# 선택: 프로젝트 로컬 도구 경로
+_.path = ["./node_modules/.bin"]

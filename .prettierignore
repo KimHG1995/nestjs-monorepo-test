@@ -1,0 +1,11 @@
+# 빌드/생성 산출물
+dist
+coverage
+node_modules
+
+# 잠금 파일 · 생성 파일
+package-lock.json
+libs/prisma-client/ERD.md
+
+# husky 내부 디렉터리
+.husky/_
