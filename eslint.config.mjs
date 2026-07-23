@@ -33,7 +33,32 @@ export default tseslint.config(
   {
     rules: {
       '@typescript-eslint/no-unused-vars': 'off',
-      '@typescript-eslint/no-explicit-any': 'off',
+      '@typescript-eslint/no-explicit-any': 'error',
+      '@typescript-eslint/naming-convention': [
+        'error',
+        {
+          selector: 'variable',
+          modifiers: ['const'],
+          format: ['camelCase', 'PascalCase', 'UPPER_CASE'],
+        },
+        {
+          selector: 'variable',
+          format: ['camelCase'],
+        },
+        {
+          selector: ['function', 'method'],
+          format: ['camelCase'],
+        },
+        {
+          selector: 'parameter',
+          format: ['camelCase'],
+          leadingUnderscore: 'allow',
+        },
+        {
+          selector: 'typeLike',
+          format: ['PascalCase'],
+        },
+      ],
       '@typescript-eslint/no-floating-promises': 'warn',
       '@typescript-eslint/no-unsafe-argument': 'warn',
     },
@@ -76,8 +101,8 @@ export default tseslint.config(
     },
   },
   {
-    // 테스트에서는 supertest 응답 본문 등 `any` 를 다루는 것이 일반적이므로
-    // 타입 안전 관련 규칙을 완화합니다. (운영 코드는 그대로 엄격하게 유지)
+    // 테스트에서는 supertest 응답 본문 등 외부 경계의 unsafe 접근 규칙만 완화합니다.
+    // 명시적 `any` 금지는 테스트에도 전역으로 유지합니다.
     files: ['**/*.spec.ts', '**/*.e2e-spec.ts'],
     rules: {
       '@typescript-eslint/no-unsafe-assignment': 'off',
