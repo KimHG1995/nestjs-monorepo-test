@@ -37,4 +37,18 @@ describe('ApiServerController', () => {
     });
     expect(mockSqs.sendMessage).toHaveBeenCalledWith(dto, dto.userId);
   });
+
+  it('상품 활동의 productId를 SQS 메시지에 보존한다', async () => {
+    mockSqs.sendMessage.mockResolvedValue({ MessageId: 'msg-product-1' });
+    const dto = {
+      userId: '11111111-1111-1111-1111-111111111111',
+      activityType: 'view_product',
+      productId: '22222222-2222-2222-2222-222222222222',
+      timestamp: '2026-07-23T00:00:00.000Z',
+    } as TrackActivityDto;
+
+    await controller.trackActivity(dto);
+
+    expect(mockSqs.sendMessage).toHaveBeenCalledWith(dto, dto.userId);
+  });
 });

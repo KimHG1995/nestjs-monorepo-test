@@ -5,6 +5,7 @@ export * from './interfaces/api-response.interface';
 export * from './filters/all-exceptions.filter';
 export * from './interceptors/response-transform.interceptor';
 export * from './decorators/skip-response-transform.decorator';
+export * from './schemas/activity-event.schema';
 export * from './schemas/json-value.schema';
 export * from './utils/request.util';
 export * from './utils/problem-details.factory';
