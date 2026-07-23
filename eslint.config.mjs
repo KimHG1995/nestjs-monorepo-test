@@ -8,6 +8,7 @@ export default tseslint.config(
   {
     ignores: [
       'eslint.config.mjs',
+      'webpack.config.js',
       'dist/**',
       'coverage/**',
       'node_modules/**',

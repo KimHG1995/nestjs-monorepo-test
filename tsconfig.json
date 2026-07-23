@@ -5,11 +5,10 @@
     "removeComments": true,
     "emitDecoratorMetadata": true,
     "experimentalDecorators": true,
-    "allowSyntheticDefaultImports": true,
+    "esModuleInterop": true,
     "target": "ES2021",
     "sourceMap": true,
     "outDir": "./dist",
-    "baseUrl": "./",
     "incremental": true,
     "skipLibCheck": true,
     "strictNullChecks": false,
@@ -17,17 +16,18 @@
     "strictBindCallApply": false,
     "forceConsistentCasingInFileNames": false,
     "noFallthroughCasesInSwitch": false,
+    "types": ["node", "jest"],
     "paths": {
-      "@app/sqs-client": ["libs/sqs-client/src"],
-      "@app/sqs-client/*": ["libs/sqs-client/src/*"],
-      "@app/common-utils": ["libs/common-utils/src"],
-      "@app/common-utils/*": ["libs/common-utils/src/*"],
-      "@app/config": ["libs/config/src"],
-      "@app/config/*": ["libs/config/src/*"],
-      "@app/logger": ["libs/logger/src"],
-      "@app/logger/*": ["libs/logger/src/*"],
-      "@app/prisma-client": ["libs/prisma-client/src"],
-      "@app/prisma-client/*": ["libs/prisma-client/src/*"]
+      "@app/sqs-client": ["./libs/sqs-client/src"],
+      "@app/sqs-client/*": ["./libs/sqs-client/src/*"],
+      "@app/common-utils": ["./libs/common-utils/src"],
+      "@app/common-utils/*": ["./libs/common-utils/src/*"],
+      "@app/config": ["./libs/config/src"],
+      "@app/config/*": ["./libs/config/src/*"],
+      "@app/logger": ["./libs/logger/src"],
+      "@app/logger/*": ["./libs/logger/src/*"],
+      "@app/prisma-client": ["./libs/prisma-client/src"],
+      "@app/prisma-client/*": ["./libs/prisma-client/src/*"]
     }
   }
 }

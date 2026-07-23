@@ -136,6 +136,8 @@ CI의 `npm ci`도 DB 연결 없이 Client를 생성할 수 있어야 한다. 이
 
 `tsconfig.typecheck.json`은 이미 이 형식을 사용하므로 중복된 설명 중 “기존 도구는 baseUrl을 유지한다”는 내용을 제거한다. 기존 TypeScript 5.9, ts-jest, ts-loader 및 tsconfig-paths는 `baseUrl` 없는 상대 `paths`를 지원하므로 별도 경고 억제 옵션은 추가하지 않는다.
 
+네이티브 TS 7은 루트 설정의 테스트 파일에 필요한 Jest 및 Node 전역 타입을 명시적으로 로드하고, `export =` 형식인 supertest는 default import와 `esModuleInterop`로 사용한다. Nest CLI 10의 Webpack path plugin은 상속된 `paths`의 선언 위치를 보존하지 못하므로, `webpack.config.js`에서만 저장소 루트를 plugin `baseUrl`로 제공한다. deprecated TypeScript 옵션은 되살리지 않는다.
+
 ## 오류 처리
 
 - CLI 구성은 DB가 필요 없는 생성 단계에서 환경변수 부재를 허용한다.
@@ -176,6 +178,10 @@ CI의 `npm ci`도 DB 연결 없이 Client를 생성할 수 있어야 한다. 이
 - `libs/prisma-client/src/index.ts`
 - `tsconfig.json`
 - `tsconfig.typecheck.json`
+- `webpack.config.js`
+- `eslint.config.mjs`
+- `apps/api-server/test/activity.e2e-spec.ts`
+- `apps/web-server/test/web-server.e2e-spec.ts`
 - `Dockerfile`
 - 필요 시 Prisma Client 초기화 단위 테스트
 

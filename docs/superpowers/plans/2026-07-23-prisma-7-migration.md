@@ -27,6 +27,12 @@
 
 - Modify: `tsconfig.json`
 - Modify: `tsconfig.typecheck.json`
+- Modify: `apps/api-server/test/activity.e2e-spec.ts`
+- Modify: `apps/web-server/test/web-server.e2e-spec.ts`
+- Create: `webpack.config.js`
+- Modify: `eslint.config.mjs`
+- Modify: `package.json`
+- Modify: `package-lock.json`
 
 **Interfaces:**
 
@@ -78,11 +84,52 @@ In `tsconfig.typecheck.json`, replace the introductory comment with:
 // 경로 별칭은 루트 tsconfig.json과 동일하게 baseUrl 없이 상대경로를 사용합니다.
 ```
 
+Native TS 7 does not implicitly load the Jest globals for the root project and
+does not treat a namespace import from an `export =` module as callable. Set
+`"esModuleInterop": true` in both configs, set root `types` to
+`["node", "jest"]`, set typecheck-only `types` to `["node"]`, and change both
+e2e files from:
+
+```typescript
+import * as request from 'supertest';
+```
+
+to:
+
+```typescript
+import request from 'supertest';
+```
+
+Nest CLI 10 resolves inherited paths relative to each app tsconfig instead of
+the root config that declared them. Add `tsconfig-paths-webpack-plugin` as a
+direct development dependency and create `webpack.config.js`:
+
+```javascript
+const { TsconfigPathsPlugin } = require('tsconfig-paths-webpack-plugin');
+
+module.exports = (defaultConfig) => ({
+  resolve: {
+    ...defaultConfig.resolve,
+    plugins: [
+      new TsconfigPathsPlugin({
+        baseUrl: '.',
+        configFile: 'tsconfig.json',
+      }),
+    ],
+  },
+});
+```
+
+Ignore this CommonJS build configuration in the type-aware ESLint project in
+the same way as `eslint.config.mjs`; Prettier and build execution still verify
+it.
+
 - [ ] **Step 3: Verify both compilers and the alias consumers**
 
 Run:
 
 ```bash
+npm run clean
 npx tsgo --noEmit -p tsconfig.json
 npm run typecheck
 npm run typecheck:tsc
@@ -95,7 +142,7 @@ Expected: every command exits 0; Jest reports 3 passing suites and 14 passing te
 - [ ] **Step 4: Commit the path migration**
 
 ```bash
-git add tsconfig.json tsconfig.typecheck.json
+git add tsconfig.json tsconfig.typecheck.json apps/api-server/test/activity.e2e-spec.ts apps/web-server/test/web-server.e2e-spec.ts webpack.config.js eslint.config.mjs package.json package-lock.json docs/superpowers/specs/2026-07-23-prisma-7-migration-design.md docs/superpowers/plans/2026-07-23-prisma-7-migration.md
 git commit -m "chore(config): migrate TypeScript path aliases"
 ```
 

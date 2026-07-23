@@ -3,16 +3,15 @@
   // Go 네이티브 TypeScript(tsgo, TS 7)용 타입체크 전용 설정입니다.
   // `npm run typecheck` → `tsgo --noEmit -p tsconfig.typecheck.json`
   //
-  // TS 7 은 `baseUrl` 을 제거했고 `paths` 값이 상대경로여야 하므로, 기존 툴체인
-  // (webpack/ts-loader·ts-jest·typescript-eslint, 모두 TS 5 기반)이 쓰는
-  // tsconfig.json 과 분리하여 별도로 둡니다. (그쪽은 그대로 baseUrl 유지)
+  // 테스트 파일과 emit 옵션을 제외한 운영 소스 타입 검사를 빠르게 수행합니다.
+  // 경로 별칭은 루트 tsconfig.json 과 동일하게 baseUrl 없이 상대경로를 사용합니다.
   // ─────────────────────────────────────────────────────────────────────────
   "compilerOptions": {
     "module": "commonjs",
     "target": "ES2021",
     "emitDecoratorMetadata": true,
     "experimentalDecorators": true,
-    "allowSyntheticDefaultImports": true,
+    "esModuleInterop": true,
     "skipLibCheck": true,
     "strictNullChecks": false,
     "noImplicitAny": true,
@@ -20,6 +19,7 @@
     "forceConsistentCasingInFileNames": false,
     "noFallthroughCasesInSwitch": false,
     "noEmit": true,
+    "types": ["node"],
     "paths": {
       "@app/sqs-client": ["./libs/sqs-client/src"],
       "@app/sqs-client/*": ["./libs/sqs-client/src/*"],
