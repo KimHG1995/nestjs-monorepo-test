@@ -1,0 +1,38 @@
+// Prisma 스키마 — 데이터베이스 스키마와 클라이언트를 중앙에서 관리합니다.
+// 문서: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+// 스키마가 바뀔 때마다 ERD 를 자동 생성합니다.
+// output 을 .md 로 지정하면 mermaid 마크다운으로 출력되어 별도 렌더러(mermaid-cli)가 필요 없습니다.
+// 클라이언트만 빠르게 만들고 싶을 땐 `prisma generate --generator client` 를 사용하세요.
+generator erd {
+  provider = "prisma-erd-generator"
+  output   = "../ERD.md"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+/// 사용자 활동 이벤트. activity-worker 가 SQS 메시지를 소비하여 이 테이블에 적재합니다.
+model UserActivity {
+  id           String   @id @default(uuid())
+  /// 활동을 발생시킨 사용자 ID
+  userId       String   @map("user_id")
+  /// 활동 유형 (login, logout, view_product, add_to_cart ...)
+  activityType String   @map("activity_type")
+  /// 활동에 대한 추가 세부 정보(JSON)
+  details      Json?
+  /// 클라이언트가 보고한 활동 발생 시각
+  occurredAt   DateTime @map("occurred_at")
+  /// 레코드 적재 시각
+  createdAt    DateTime @default(now()) @map("created_at")
+
+  @@index([userId])
+  @@index([activityType])
+  @@map("user_activities")
+}
