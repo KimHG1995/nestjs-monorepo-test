@@ -249,7 +249,7 @@ mise exec -- npx eslint apps/activity-worker
 
 Expected: 4 tests pass, TypeScript exits 0, and ESLint reports no errors.
 
-- [ ] **Step 6: Commit**
+- [x] **Step 6: Commit**
 
 ```bash
 git add apps/activity-worker
@@ -274,13 +274,13 @@ git commit -m "refactor(worker): isolate activity consumer module"
 - Consumes: `PrismaModule` explicitly from product and analytics features.
 - Preserves: all product, funnel, and health routes and response semantics.
 
-- [ ] **Step 1: Move products without changing behavior**
+- [x] **Step 1: Move products without changing behavior**
 
 Move the complete products directory to `src/modules/products`. Relative
 imports remain valid because DTOs, service, controller, module, and tests move
 together.
 
-- [ ] **Step 2: Make the product infrastructure dependency explicit**
+- [x] **Step 2: Make the product infrastructure dependency explicit**
 
 Update `products.module.ts`:
 
@@ -300,12 +300,12 @@ import { ProductsService } from './products.service';
 export class ProductsModule {}
 ```
 
-- [ ] **Step 3: Move admin analytics without changing behavior**
+- [x] **Step 3: Move admin analytics without changing behavior**
 
 Move the complete analytics directory to `src/modules/admin/analytics`.
 Keep its DTO, calculator, service, controller, module, and tests together.
 
-- [ ] **Step 4: Make the analytics infrastructure dependency explicit**
+- [x] **Step 4: Make the analytics infrastructure dependency explicit**
 
 Update `analytics.module.ts`:
 
@@ -325,7 +325,7 @@ import { AnalyticsService } from './analytics.service';
 export class AnalyticsModule {}
 ```
 
-- [ ] **Step 5: Encapsulate the health controller**
+- [x] **Step 5: Encapsulate the health controller**
 
 Move `health.controller.ts` into `src/modules/health` and create:
 
@@ -340,7 +340,7 @@ import { HealthController } from './health.controller';
 export class HealthModule {}
 ```
 
-- [ ] **Step 6: Simplify the Web Server root module**
+- [x] **Step 6: Simplify the Web Server root module**
 
 Remove direct `PrismaModule` and `HealthController` registration. Import:
 
@@ -364,7 +364,7 @@ imports: [
 ];
 ```
 
-- [ ] **Step 7: Verify Web Server unit and e2e tests**
+- [x] **Step 7: Verify Web Server unit and e2e tests**
 
 Run:
 
