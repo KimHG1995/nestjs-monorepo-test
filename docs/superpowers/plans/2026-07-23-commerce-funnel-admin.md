@@ -1391,7 +1391,7 @@ mise exec -- npx eslint .
 
 Expected: web e2e, all unit tests, both type checks, and ESLint pass.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add apps/web-server
@@ -1411,7 +1411,7 @@ git commit -m "feat(web): replace widgets with database admin API"
 - Documents: product CRUD payloads, activity tracking with `productId`, purchase event, and funnel query.
 - Documents: baseline migration handling for databases previously created with `prisma db push`.
 
-- [ ] **Step 1: Update environment and migration documentation**
+- [x] **Step 1: Update environment and migration documentation**
 
 Change the `.env.example` database heading from activity-worker-only to:
 
@@ -1449,7 +1449,7 @@ npm run prisma:migrate
 
 Fresh databases run only `npm run prisma:migrate`.
 
-- [ ] **Step 2: Verify generated artifacts and formatting**
+- [x] **Step 2: Verify generated artifacts and formatting**
 
 Run:
 
@@ -1458,15 +1458,14 @@ mise exec -- npm run prisma:generate
 mise exec -- npx prisma validate
 mise exec -- npx prettier --check \
   README.md \
-  .env.example \
   docs/superpowers/specs/2026-07-23-commerce-funnel-admin-design.md \
   docs/superpowers/plans/2026-07-23-commerce-funnel-admin.md
 git diff --check
 ```
 
-Expected: Prisma generation and validation succeed, formatting passes, and Git reports no whitespace errors.
+Expected: Prisma generation and validation succeed, Markdown formatting passes, and Git reports no whitespace errors (including `.env.example`).
 
-- [ ] **Step 3: Run complete verification**
+- [x] **Step 3: Run complete verification**
 
 Run:
 
@@ -1490,12 +1489,12 @@ Expected:
 - `api-server`, `activity-worker`, and `web-server`: Webpack success
 - default `npm run build`: Webpack success
 
-- [ ] **Step 4: Confirm requirements and repository state**
+- [x] **Step 4: Confirm requirements and repository state**
 
 Run:
 
 ```bash
-if rg -n '\bany\b' \
+if rg -n '(:\s*any\b|<any>|as\s+any\b|any\[\])' \
   apps/web-server/src/products \
   apps/web-server/src/admin \
   libs/common-utils/src/schemas/activity-event.schema.ts; then
@@ -1512,14 +1511,14 @@ git diff --check
 
 Expected: no explicit `any`, no Widget directory, and only the planned README/.env changes remain.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add README.md .env.example libs/prisma-client/ERD.md
 git commit -m "docs: document commerce funnel workflow"
 ```
 
-- [ ] **Step 6: Final status**
+- [x] **Step 6: Final status**
 
 Run:
 

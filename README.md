@@ -4,7 +4,7 @@
 모든 API 는 하나의 일관된 파이프라인을 통해 **요청은 Zod 로 검증**하고, **성공 응답은 정형화된 구조**로,
 **실패 응답은 RFC 7807 `application/problem+json`** 으로 정형화하여 반환합니다.
 
-이벤트 기반(API → SQS → Worker → DB) 흐름과, 범용 HTTPS REST 서버를 함께 제공합니다.
+이벤트 기반(API → SQS → Worker → DB) 활동 수집 흐름과, PostgreSQL 기반 상품 관리·커머스 퍼널 분석 API를 함께 제공합니다.
 
 ## 주요 기술 스택
 
@@ -38,10 +38,17 @@
 // 200/201
 {
   "success": true,
-  "data": { "id": "…", "name": "위젯 A", "color": "red" },
+  "data": {
+    "id": "22222222-2222-2222-2222-222222222222",
+    "sku": "SKU-001",
+    "name": "상품 A",
+    "priceInMinorUnits": 12000,
+    "currency": "KRW",
+    "stockQuantity": 10,
+  },
   "meta": {
     "timestamp": "2026-07-23T00:00:00.000Z",
-    "path": "/widgets",
+    "path": "/products",
     "traceId": "26229f8c-5697-4e72-b214-8f0aa039f083",
   },
 }
@@ -59,8 +66,8 @@
   "status": 404,
   "code": "NOT_FOUND",
   "timestamp": "2026-07-23T00:00:00.000Z",
-  "detail": "위젯을 찾을 수 없습니다: …",
-  "instance": "/widgets/…",
+  "detail": "상품을 찾을 수 없습니다: 22222222-2222-2222-2222-222222222222",
+  "instance": "/products/22222222-2222-2222-2222-222222222222",
   "traceId": "fc0263b6-96eb-45b8-8ce4-a40bee23b6ea",
 }
 ```
@@ -77,18 +84,18 @@
   "status": 400,
   "code": "VALIDATION_FAILED",
   "detail": "요청 데이터가 유효성 검증을 통과하지 못했습니다.",
-  "instance": "/widgets",
+  "instance": "/products",
   "traceId": "…",
   "errors": [
     {
-      "name": "name",
-      "reason": "이름은 최소 1자 이상이어야 합니다.",
+      "name": "sku",
+      "reason": "SKU는 필수입니다.",
       "code": "too_small",
     },
     {
-      "name": "color",
-      "reason": "color 는 red, green, blue 중 하나여야 합니다.",
-      "code": "invalid_enum_value",
+      "name": "priceInMinorUnits",
+      "reason": "가격은 0 이상이어야 합니다.",
+      "code": "too_small",
     },
   ],
 }
@@ -178,7 +185,22 @@ flowchart TD
 
 - **`api-server`** (기본 포트 3000): 사용자 활동을 HTTP 로 받아 SQS FIFO 큐로 발행합니다. 표준 프로토콜 적용.
 - **`activity-worker`**: SQS 를 롱 폴링하여 메시지를 Zod 로 재검증한 뒤 **Prisma 로 DB 에 적재**합니다. (HTTP 서버 없음)
-- **`web-server`** (기본 포트 3002): SQS 와 무관한 범용 REST 서버. 위젯(Widget) 리소스 CRUD 로 표준 프로토콜을 시연하며, 설정으로 **HTTPS** 를 켤 수 있습니다.
+- **`web-server`** (기본 포트 3002): PostgreSQL 기반 상품 CRUD와 상품별 전환 퍼널 관리 API를 제공하며, 설정으로 **HTTPS** 를 켤 수 있습니다.
+
+### 커머스 관리 API
+
+| 메서드   | 경로                      | 역할                                 |
+| -------- | ------------------------- | ------------------------------------ |
+| `POST`   | `/products`               | 상품 생성                            |
+| `GET`    | `/products`               | 활성 상품 검색·페이지 조회           |
+| `GET`    | `/products/:id`           | 활성 상품 단건 조회                  |
+| `PATCH`  | `/products/:id`           | 상품 부분 수정                       |
+| `DELETE` | `/products/:id`           | 상품 소프트 삭제                     |
+| `GET`    | `/admin/analytics/funnel` | 기간·상품별 전환 퍼널 관리 지표 조회 |
+
+상품 행동 이벤트는 `view_product`, `add_to_cart`, `purchase` 순서로 수집하며 `productId`가 필수입니다.
+퍼널은 지정 기간의 원시 이벤트를 시간순으로 처리해 각 단계를 순서대로 완료한 고유 사용자 수와 전환율을 계산합니다.
+소프트 삭제된 상품도 과거 분석 이력을 유지하기 위해 퍼널 조회 대상에 포함됩니다.
 
 ---
 
@@ -212,7 +234,7 @@ cp .env.example .env
 
 ```bash
 npm run docker:up          # LocalStack(SQS FIFO 큐 자동 생성) + PostgreSQL
-npm run prisma:migrate     # DB 스키마 생성 (activity-worker 용)
+npm run prisma:migrate     # DB 스키마 생성 (activity-worker + web-server)
 ```
 
 ### 4. 애플리케이션 실행
@@ -228,15 +250,30 @@ Swagger UI: `http://localhost:3002/api-docs`, `http://localhost:3000/api-docs`
 ### 5. 빠른 확인
 
 ```bash
-# 성공 응답
-curl -s http://localhost:3002/widgets -X POST \
+# 상품 생성
+curl -s http://localhost:3002/products -X POST \
   -H 'Content-Type: application/json' \
-  -d '{"name":"위젯 A","color":"red","quantity":3}'
+  -d '{"sku":"SKU-001","name":"상품 A","priceInMinorUnits":12000,"currency":"KRW","stockQuantity":10}'
 
-# 검증 에러 (RFC 7807)
-curl -s http://localhost:3002/widgets -X POST \
+# 상품 조회 이벤트 발행
+curl -s http://localhost:3000/activity/track -X POST \
   -H 'Content-Type: application/json' \
-  -d '{"name":"","color":"purple"}'
+  -d '{"userId":"11111111-1111-1111-1111-111111111111","activityType":"view_product","productId":"<생성된 상품 UUID>","timestamp":"2026-07-23T00:00:00.000Z"}'
+
+# 장바구니 추가와 구매 이벤트를 같은 userId/productId로 시간순 발행
+curl -s http://localhost:3000/activity/track -X POST \
+  -H 'Content-Type: application/json' \
+  -d '{"userId":"11111111-1111-1111-1111-111111111111","activityType":"add_to_cart","productId":"<생성된 상품 UUID>","timestamp":"2026-07-23T00:01:00.000Z"}'
+
+curl -s http://localhost:3000/activity/track -X POST \
+  -H 'Content-Type: application/json' \
+  -d '{"userId":"11111111-1111-1111-1111-111111111111","activityType":"purchase","productId":"<생성된 상품 UUID>","timestamp":"2026-07-23T00:02:00.000Z"}'
+
+# activity-worker가 이벤트를 DB에 적재한 뒤 퍼널 조회
+curl -G -s http://localhost:3002/admin/analytics/funnel \
+  --data-urlencode 'productId=<생성된 상품 UUID>' \
+  --data-urlencode 'from=2026-07-23T00:00:00.000Z' \
+  --data-urlencode 'to=2026-07-24T00:00:00.000Z'
 ```
 
 ### HTTPS 로 실행하기 (web-server)
@@ -305,6 +342,14 @@ npm run prisma:studio     # Prisma Studio
 
 > 스키마([libs/prisma-client/prisma/schema.prisma](libs/prisma-client/prisma/schema.prisma))가 바뀌면
 > `prisma-erd-generator` 가 [libs/prisma-client/ERD.md](libs/prisma-client/ERD.md) 를 mermaid 다이어그램으로 자동 갱신합니다.
+
+새 데이터베이스는 `npm run prisma:migrate`만 실행하면 됩니다. 기존에 `prisma db push`로 생성한 데이터베이스는
+기존 테이블을 보존하면서 기준 마이그레이션을 적용된 것으로 등록한 뒤 증분 마이그레이션을 실행합니다.
+
+```bash
+npx prisma migrate resolve --applied 20260723000000_baseline
+npm run prisma:migrate
+```
 
 ### Docker 이미지 빌드
 
