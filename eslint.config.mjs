@@ -12,6 +12,7 @@ export default tseslint.config(
       'dist/**',
       'coverage/**',
       'node_modules/**',
+      'libs/prisma-client/generated/**',
       'libs/prisma-client/prisma/**',
     ],
   },

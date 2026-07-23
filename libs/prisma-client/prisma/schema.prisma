@@ -2,7 +2,9 @@
 // 문서: https://pris.ly/d/prisma-schema
 
 generator client {
-  provider = "prisma-client-js"
+  provider     = "prisma-client"
+  output       = "../generated/prisma"
+  moduleFormat = "cjs"
 }
 
 // 스키마가 바뀔 때마다 ERD 를 자동 생성합니다.
@@ -15,7 +17,6 @@ generator erd {
 
 datasource db {
   provider = "postgresql"
-  url      = env("DATABASE_URL")
 }
 
 /// 사용자 활동 이벤트. activity-worker 가 SQS 메시지를 소비하여 이 테이블에 적재합니다.

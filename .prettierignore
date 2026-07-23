@@ -2,6 +2,7 @@
 dist
 coverage
 node_modules
+libs/prisma-client/generated
 
 # 잠금 파일 · 생성 파일
 package-lock.json
