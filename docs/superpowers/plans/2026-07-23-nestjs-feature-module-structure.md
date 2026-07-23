@@ -380,7 +380,7 @@ mise exec -- npx eslint apps/web-server
 Expected: 12 unit tests and 4 e2e tests pass, TypeScript exits 0, and ESLint
 reports no errors.
 
-- [ ] **Step 8: Commit**
+- [x] **Step 8: Commit**
 
 ```bash
 git add apps/web-server
@@ -399,7 +399,7 @@ git commit -m "refactor(web): organize feature modules"
 - Documents: the common application source layout and feature-module dependency rule.
 - Verifies: no behavior regressions and no business implementation outside `src/modules`.
 
-- [ ] **Step 1: Document the application source convention**
+- [x] **Step 1: Document the application source convention**
 
 Add this structure to the README project-structure section:
 
@@ -419,7 +419,7 @@ apps/<app>/src/
 Document that root modules compose features and feature modules own their
 controllers, services, DTOs, tests, and consumed infrastructure modules.
 
-- [ ] **Step 2: Verify source placement**
+- [x] **Step 2: Verify source placement**
 
 Run:
 
@@ -442,7 +442,7 @@ fi
 
 Expected: no explicit `any`.
 
-- [ ] **Step 3: Run full verification**
+- [x] **Step 3: Run full verification**
 
 Run:
 
@@ -468,14 +468,14 @@ Expected:
 - API Server, Activity Worker, Web Server, and the default build compile.
 - Git reports no whitespace errors.
 
-- [ ] **Step 4: Commit documentation**
+- [x] **Step 4: Commit documentation**
 
 ```bash
 git add README.md
 git commit -m "docs: document NestJS app module layout"
 ```
 
-- [ ] **Step 5: Confirm final repository state**
+- [x] **Step 5: Confirm final repository state**
 
 Run:
 

@@ -187,6 +187,29 @@ flowchart TD
 - **`activity-worker`**: SQS 를 롱 폴링하여 메시지를 Zod 로 재검증한 뒤 **Prisma 로 DB 에 적재**합니다. (HTTP 서버 없음)
 - **`web-server`** (기본 포트 3002): PostgreSQL 기반 상품 CRUD와 상품별 전환 퍼널 관리 API를 제공하며, 설정으로 **HTTPS** 를 켤 수 있습니다.
 
+### 애플리케이션 내부 구조
+
+모든 앱은 루트 모듈이 기능 모듈을 조립하고, 각 기능 모듈이 자신의
+컨트롤러·서비스·DTO·테스트와 인프라 의존성을 소유하는 동일한 구조를 사용합니다.
+
+```text
+apps/<app>/src/
+├── config/               # 앱 환경변수 스키마
+├── modules/              # 도메인 기능 모듈
+│   └── <feature>/
+│       ├── dto/
+│       ├── *.controller.ts
+│       ├── *.service.ts
+│       ├── *.module.ts
+│       └── *.spec.ts
+├── <app>.module.ts       # 설정과 기능 모듈을 조립하는 루트 모듈
+└── main.ts               # Nest 애플리케이션 엔트리포인트
+```
+
+앱 내부 기능끼리는 상대 기능의 구현 파일을 직접 참조하지 않습니다. 공통 계약과
+인프라는 `@app/*` 라이브러리의 공개 진입점을 사용하고, 기능 모듈은 실제로
+사용하는 Prisma·SQS 같은 인프라 모듈을 `imports`에 명시합니다.
+
 ### 커머스 관리 API
 
 | 메서드   | 경로                      | 역할                                 |
