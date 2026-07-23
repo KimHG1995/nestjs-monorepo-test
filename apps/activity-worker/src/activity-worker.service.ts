@@ -1,80 +1,118 @@
-import { Injectable, OnModuleInit, Logger } from '@nestjs/common';
-import { SqsClientService } from '@app/sqs-client';
 import { Message } from '@aws-sdk/client-sqs';
+import { Injectable, Logger, OnModuleInit } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
+import { z } from 'zod';
+
+import { PrismaService } from '@app/prisma-client';
+import { SqsClientService } from '@app/sqs-client';
+
+import type { ActivityWorkerEnv } from './config/env';
 
 /**
- * SQS 큐에서 메시지를 주기적으로 폴링하고 처리하는 워커 서비스입니다.
+ * SQS 로 들어온 활동 메시지의 스키마입니다. (api-server 의 `TrackActivityDto` 와 대응)
+ * 소비 측에서도 Zod 로 한 번 더 검증하여, 깨진 메시지가 DB 를 오염시키지 않게 합니다.
+ */
+const ActivityMessageSchema = z.object({
+  userId: z.string().min(1),
+  activityType: z.string().min(1),
+  details: z.record(z.any()).optional(),
+  timestamp: z.string().datetime(),
+});
+
+/**
+ * SQS 큐를 폴링하여 메시지를 수신하고, 유효성 검증 후 데이터베이스에 적재하는 워커입니다.
  */
 @Injectable()
 export class ActivityWorkerService implements OnModuleInit {
   private readonly logger = new Logger(ActivityWorkerService.name);
   private isPolling = true;
 
-  constructor(private readonly sqsClientService: SqsClientService) {}
+  constructor(
+    private readonly sqsClientService: SqsClientService,
+    private readonly prisma: PrismaService,
+    private readonly config: ConfigService<ActivityWorkerEnv, true>,
+  ) {}
 
-  /**
-   * NestJS 모듈이 초기화될 때 호출되는 라이프사이클 훅입니다.
-   * SQS 큐 폴링을 시작합니다.
-   */
-  onModuleInit() {
-    this.logger.log(
-      'Activity Worker가 초기화되었습니다. SQS 큐 폴링을 시작합니다...',
-    );
-    this.startPolling();
+  onModuleInit(): void {
+    if (!this.config.get('WORKER_POLLING_ENABLED', { infer: true })) {
+      this.logger.warn(
+        'WORKER_POLLING_ENABLED=false 이므로 폴링을 시작하지 않습니다.',
+      );
+      return;
+    }
+    this.logger.log('Activity Worker 초기화 완료. SQS 폴링을 시작합니다...');
+    void this.startPolling();
   }
 
-  /**
-   * SQS 큐를 지속적으로 폴링하여 메시지를 수신하고 처리합니다.
-   * @private
-   */
-  async startPolling() {
+  /** SQS 큐를 지속적으로 폴링하여 메시지를 수신·처리합니다. */
+  async startPolling(): Promise<void> {
     while (this.isPolling) {
       try {
         const messages = await this.sqsClientService.receiveMessages();
         if (messages.length > 0) {
           this.logger.log(
-            `SQS에서 ${messages.length}개의 메시지를 수신했습니다.`,
+            `SQS 에서 ${messages.length}개의 메시지를 수신했습니다.`,
           );
           for (const message of messages) {
             await this.processMessage(message);
           }
         }
       } catch (error) {
-        this.logger.error('SQS 큐 폴링 중 오류 발생:', error);
-        // 지속적인 오류 발생 시 로그가 너무 많이 쌓이는 것을 방지하기 위해 재시도 전 딜레이를 추가합니다.
+        this.logger.error('SQS 폴링 중 오류가 발생했습니다.', error as Error);
+        // 지속적 오류 시 로그 폭주를 막기 위해 재시도 전 잠시 대기합니다.
         await new Promise((resolve) => setTimeout(resolve, 5000));
       }
     }
   }
 
   /**
-   * 단일 SQS 메시지를 처리합니다.
-   * 메시지 내용을 파싱하고, 시뮬레이션된 처리 로직을 실행한 후, 큐에서 메시지를 삭제합니다.
-   * @param {Message} message 처리할 SQS 메시지 객체
-   * @private
+   * 단일 SQS 메시지를 처리합니다. 메시지를 검증하여 DB 에 적재한 뒤 큐에서 삭제합니다.
+   * 처리에 실패하면 메시지를 삭제하지 않아 VisibilityTimeout 이후 재시도됩니다.
    */
-  private async processMessage(message: Message) {
+  async processMessage(message: Message): Promise<void> {
     try {
-      this.logger.log(`메시지 ID 처리 중: ${message.MessageId}`);
-      const body = JSON.parse(message.Body);
+      this.logger.log(`메시지 처리 중: ${message.MessageId}`);
 
-      // 처리 로직 시뮬레이션 (예: DB에 저장, 다른 서비스 호출 등)
-      this.logger.log('활동 데이터:', body);
+      const parsed = ActivityMessageSchema.safeParse(
+        JSON.parse(message.Body ?? '{}'),
+      );
+      if (!parsed.success) {
+        // 스키마에 맞지 않는(복구 불가능한) 메시지는 재시도 대신 폐기합니다.
+        this.logger.warn(
+          `유효하지 않은 메시지를 폐기합니다: ${message.MessageId} — ${parsed.error.message}`,
+        );
+        await this.deleteIfPossible(message);
+        return;
+      }
 
-      // 처리가 성공하면 큐에서 메시지를 삭제합니다.
-      await this.sqsClientService.deleteMessage(message.ReceiptHandle);
-      this.logger.log(`메시지 ${message.MessageId}가 처리 후 삭제되었습니다.`);
+      const activity = parsed.data;
+      const record = await this.prisma.userActivity.create({
+        data: {
+          userId: activity.userId,
+          activityType: activity.activityType,
+          details: activity.details,
+          occurredAt: new Date(activity.timestamp),
+        },
+      });
+      this.logger.log(`활동을 DB 에 적재했습니다. id=${record.id}`);
+
+      await this.deleteIfPossible(message);
     } catch (error) {
-      this.logger.error(`메시지 ${message.MessageId} 처리 실패:`, error);
-      // 메시지는 VisibilityTimeout 이후에 다시 큐에 나타나 재시도할 수 있게 됩니다.
-      // 지속적으로 실패하는 메시지를 위해 Dead Letter Queue (DLQ)를 구현하는 것을 고려해야 합니다.
+      this.logger.error(
+        `메시지 처리 실패: ${message.MessageId}. 재시도됩니다.`,
+        error as Error,
+      );
+      // 반복 실패 메시지를 위해 Dead Letter Queue(DLQ) 구성을 권장합니다.
     }
   }
 
-  /**
-   * 메시지 폴링을 중지합니다.
-   */
-  stopPolling() {
+  private async deleteIfPossible(message: Message): Promise<void> {
+    if (message.ReceiptHandle) {
+      await this.sqsClientService.deleteMessage(message.ReceiptHandle);
+    }
+  }
+
+  stopPolling(): void {
     this.isPolling = false;
     this.logger.log('폴링이 중지되었습니다.');
   }
