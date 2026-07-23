@@ -824,7 +824,7 @@ mise exec -- npx eslint apps/web-server/src/products
 
 Expected: product tests pass, typecheck exits 0, and ESLint reports no errors.
 
-- [ ] **Step 7: Commit**
+- [x] **Step 7: Commit**
 
 ```bash
 git add apps/web-server/src/products
@@ -850,7 +850,7 @@ git commit -m "feat(web): add product management API"
 - Produces: `AnalyticsService.getProductFunnel(query)`.
 - Produces: `GET /admin/analytics/funnel`.
 
-- [ ] **Step 1: Write failing pure funnel tests**
+- [x] **Step 1: Write failing pure funnel tests**
 
 Create `funnel-calculator.spec.ts`:
 
@@ -917,7 +917,7 @@ describe('calculateProductFunnel', () => {
 });
 ```
 
-- [ ] **Step 2: Run calculator tests and confirm RED**
+- [x] **Step 2: Run calculator tests and confirm RED**
 
 Run:
 
@@ -929,7 +929,7 @@ mise exec -- npx jest \
 
 Expected: FAIL because `calculateProductFunnel` does not exist.
 
-- [ ] **Step 3: Implement the pure calculator**
+- [x] **Step 3: Implement the pure calculator**
 
 Create `funnel-calculator.ts`:
 
@@ -997,7 +997,7 @@ export function calculateProductFunnel(
 }
 ```
 
-- [ ] **Step 4: Write failing analytics service tests**
+- [x] **Step 4: Write failing analytics service tests**
 
 Create `analytics.service.spec.ts`:
 
@@ -1074,7 +1074,7 @@ describe('AnalyticsService', () => {
 });
 ```
 
-- [ ] **Step 5: Add the query DTO and analytics service**
+- [x] **Step 5: Add the query DTO and analytics service**
 
 Create `funnel-query.dto.ts`:
 
@@ -1158,7 +1158,7 @@ export class AnalyticsService {
 }
 ```
 
-- [ ] **Step 6: Add controller and module**
+- [x] **Step 6: Add controller and module**
 
 Create `analytics.controller.ts`:
 
@@ -1196,7 +1196,7 @@ import { AnalyticsService } from './analytics.service';
 export class AnalyticsModule {}
 ```
 
-- [ ] **Step 7: Verify analytics tests**
+- [x] **Step 7: Verify analytics tests**
 
 Run:
 
