@@ -3,6 +3,7 @@ import { Injectable, Logger, OnModuleInit } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { z } from 'zod';
 
+import { JsonObjectSchema } from '@app/common-utils';
 import { PrismaService } from '@app/prisma-client';
 import { SqsClientService } from '@app/sqs-client';
 
@@ -15,7 +16,7 @@ import type { ActivityWorkerEnv } from './config/env';
 const ActivityMessageSchema = z.object({
   userId: z.string().min(1),
   activityType: z.string().min(1),
-  details: z.record(z.any()).optional(),
+  details: JsonObjectSchema.optional(),
   timestamp: z.string().datetime(),
 });
 

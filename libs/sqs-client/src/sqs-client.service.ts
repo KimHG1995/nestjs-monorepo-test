@@ -46,8 +46,8 @@ export class SqsClientService implements OnModuleInit {
    * @param body 전송할 메시지의 본문(객체)
    * @param messageGroupId 메시지 그룹 ID. 동일 그룹의 메시지는 순서대로 처리됩니다.
    */
-  async sendMessage<T extends Record<string, any>>(
-    body: T,
+  async sendMessage(
+    body: object,
     messageGroupId: string,
   ): Promise<SendMessageCommandOutput> {
     const command = new SendMessageCommand({
