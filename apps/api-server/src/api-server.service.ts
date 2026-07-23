@@ -1,5 +1,7 @@
 import { Injectable } from '@nestjs/common';
+
 import { SqsClientService } from '@app/sqs-client';
+
 import { TrackActivityDto } from './track-activity.dto';
 
 /**

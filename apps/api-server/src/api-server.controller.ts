@@ -1,8 +1,8 @@
-import { Controller, Post, Body, ValidationPipe } from '@nestjs/common';
+import { Body, Controller, Post } from '@nestjs/common';
+import { ApiOperation, ApiResponse, ApiTags } from '@nestjs/swagger';
+
 import { ApiServerService } from './api-server.service';
 import { TrackActivityDto } from './track-activity.dto';
-import { ApiTags, ApiOperation, ApiResponse } from '@nestjs/swagger';
-import { UseZodGuard } from 'nestjs-zod';
 
 /**
  * 사용자 활동 추적과 관련된 API 엔드포인트를 제공하는 컨트롤러입니다.
@@ -24,8 +24,10 @@ export class ApiServerController {
     status: 201,
     description: '활동이 성공적으로 추적되었습니다.',
   })
-  @ApiResponse({ status: 400, description: '잘못된 입력 데이터입니다.' })
-  @UseZodGuard('body', TrackActivityDto)
+  @ApiResponse({
+    status: 400,
+    description: '잘못된 입력 데이터입니다. (RFC 7807)',
+  })
   async trackActivity(@Body() trackActivityDto: TrackActivityDto) {
     return this.apiServerService.trackActivity(trackActivityDto);
   }

@@ -1,9 +1,12 @@
-import * as request from 'supertest';
-import { Test } from '@nestjs/testing';
-import { INestApplication } from '@nestjs/common';
-import { SqsClientService } from '@app/sqs-client';
-import { ApiServerModule } from '../src/api-server.module';
 import { randomUUID } from 'crypto';
+
+import { INestApplication } from '@nestjs/common';
+import { Test } from '@nestjs/testing';
+import * as request from 'supertest';
+
+import { SqsClientService } from '@app/sqs-client';
+
+import { ApiServerModule } from '../src/api-server.module';
 
 describe('활동 추적기 (e2e)', () => {
   let app: INestApplication;
@@ -57,7 +60,13 @@ describe('활동 추적기 (e2e)', () => {
       .send(activityPayload)
       .expect(201)
       .then((response) => {
-        expect(response.body).toEqual({ messageId: 'mock-message-id' });
+        // 응답은 표준 성공 봉투로 정형화된다.
+        expect(response.body.success).toBe(true);
+        expect(response.body.data).toEqual({ messageId: 'mock-message-id' });
+        expect(response.body.meta).toMatchObject({
+          path: '/activity/track',
+          traceId: expect.any(String),
+        });
         // sendMessage가 올바른 인자와 함께 호출되었는지 검증
         expect(sqsClientService.sendMessage).toHaveBeenCalledWith(
           activityPayload,
@@ -66,7 +75,7 @@ describe('활동 추적기 (e2e)', () => {
       });
   });
 
-  it('/activity/track (POST) - 잘못된 데이터에 대해 400을 반환해야 함', () => {
+  it('/activity/track (POST) - 잘못된 데이터는 RFC 7807 형식으로 400을 반환해야 함', () => {
     const invalidPayload = {
       userId: 'not-a-uuid', // 잘못된 UUID
       activityType: 'unknown_activity', // enum에 없는 값
@@ -76,6 +85,20 @@ describe('활동 추적기 (e2e)', () => {
     return request(app.getHttpServer())
       .post('/activity/track')
       .send(invalidPayload)
-      .expect(400);
+      .expect(400)
+      .expect('Content-Type', /application\/problem\+json/)
+      .then((response) => {
+        expect(response.body).toMatchObject({
+          status: 400,
+          code: 'VALIDATION_FAILED',
+        });
+        expect(Array.isArray(response.body.errors)).toBe(true);
+        const fields = response.body.errors.map(
+          (e: { name: string }) => e.name,
+        );
+        expect(fields).toEqual(
+          expect.arrayContaining(['userId', 'activityType', 'timestamp']),
+        );
+      });
   });
 });
