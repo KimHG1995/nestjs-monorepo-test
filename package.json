@@ -9,6 +9,14 @@
     "node": ">=24 <25",
     "npm": ">=10"
   },
+  "allowScripts": {
+    "@nestjs/core": false,
+    "@prisma/engines@7.9.0": true,
+    "@swc/core@1.13.4": true,
+    "fsevents": false,
+    "prisma@7.9.0": true,
+    "puppeteer": false
+  },
   "scripts": {
     "build": "nest build",
     "clean": "node -e \"require('fs').rmSync('dist',{recursive:true,force:true})\"",
