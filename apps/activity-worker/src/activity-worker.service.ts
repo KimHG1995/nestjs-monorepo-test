@@ -1,24 +1,12 @@
 import { Message } from '@aws-sdk/client-sqs';
 import { Injectable, Logger, OnModuleInit } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
-import { z } from 'zod';
 
-import { JsonObjectSchema } from '@app/common-utils';
+import { ActivityEventSchema } from '@app/common-utils';
 import { PrismaService } from '@app/prisma-client';
 import { SqsClientService } from '@app/sqs-client';
 
 import type { ActivityWorkerEnv } from './config/env';
-
-/**
- * SQS 로 들어온 활동 메시지의 스키마입니다. (api-server 의 `TrackActivityDto` 와 대응)
- * 소비 측에서도 Zod 로 한 번 더 검증하여, 깨진 메시지가 DB 를 오염시키지 않게 합니다.
- */
-const ActivityMessageSchema = z.object({
-  userId: z.string().min(1),
-  activityType: z.string().min(1),
-  details: JsonObjectSchema.optional(),
-  timestamp: z.string().datetime(),
-});
 
 /**
  * SQS 큐를 폴링하여 메시지를 수신하고, 유효성 검증 후 데이터베이스에 적재하는 워커입니다.
@@ -74,7 +62,7 @@ export class ActivityWorkerService implements OnModuleInit {
     try {
       this.logger.log(`메시지 처리 중: ${message.MessageId}`);
 
-      const parsed = ActivityMessageSchema.safeParse(
+      const parsed = ActivityEventSchema.safeParse(
         JSON.parse(message.Body ?? '{}'),
       );
       if (!parsed.success) {
@@ -91,6 +79,7 @@ export class ActivityWorkerService implements OnModuleInit {
         data: {
           userId: activity.userId,
           activityType: activity.activityType,
+          productId: activity.productId,
           details: activity.details,
           occurredAt: new Date(activity.timestamp),
         },

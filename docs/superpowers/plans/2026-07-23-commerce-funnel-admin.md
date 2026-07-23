@@ -213,7 +213,7 @@ mise exec -- npm run typecheck
 
 Expected: both suites pass and TypeScript 7 preview exits 0.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add \
@@ -245,7 +245,7 @@ git commit -m "feat(activity): share commerce event contract"
 - Consumes: Task 1 `ActivityEventSchema`.
 - Produces later: product and analytics services query the generated Prisma delegates.
 
-- [ ] **Step 1: Write the failing worker persistence test**
+- [x] **Step 1: Write the failing worker persistence test**
 
 Add to `apps/activity-worker/src/activity-worker.service.spec.ts`:
 
@@ -275,7 +275,7 @@ it('상품 활동의 productId를 DB에 적재한다', async () => {
 });
 ```
 
-- [ ] **Step 2: Run the worker test and confirm RED**
+- [x] **Step 2: Run the worker test and confirm RED**
 
 Run:
 
@@ -285,7 +285,7 @@ mise exec -- npx jest apps/activity-worker/src/activity-worker.service.spec.ts -
 
 Expected: FAIL because `productId` is not passed to Prisma.
 
-- [ ] **Step 3: Add the Prisma product schema**
+- [x] **Step 3: Add the Prisma product schema**
 
 Add the following model to `libs/prisma-client/prisma/schema.prisma`:
 
@@ -372,18 +372,20 @@ Export the generated product type from `libs/prisma-client/src/index.ts`:
 export type { Product, UserActivity } from '../generated/prisma/client';
 ```
 
-- [ ] **Step 4: Generate and validate Prisma artifacts**
+- [x] **Step 4: Generate and validate Prisma artifacts**
 
 Run:
 
 ```bash
 mise exec -- npm run prisma:generate
 mise exec -- npx prisma validate
+mise exec -- npx prettier --write --ignore-path /dev/null \
+  libs/prisma-client/ERD.md
 ```
 
 Expected: Prisma Client 7.9.0 and ERD generate successfully; schema is valid.
 
-- [ ] **Step 5: Make the worker consume the shared contract**
+- [x] **Step 5: Make the worker consume the shared contract**
 
 In `apps/activity-worker/src/activity-worker.service.ts`, replace the local Zod schema imports and declaration with:
 
@@ -411,7 +413,7 @@ const record = await this.prisma.userActivity.create({
 });
 ```
 
-- [ ] **Step 6: Verify worker persistence and Prisma types are GREEN**
+- [x] **Step 6: Verify worker persistence and Prisma types are GREEN**
 
 Run:
 

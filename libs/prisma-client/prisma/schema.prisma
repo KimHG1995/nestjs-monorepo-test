@@ -19,21 +19,43 @@ datasource db {
   provider = "postgresql"
 }
 
+/// web-server에서 관리하고 사용자 행동 분석의 기준이 되는 상품입니다.
+model Product {
+  id                String         @id @default(uuid())
+  sku               String         @unique
+  name              String
+  priceInMinorUnits Int            @map("price_in_minor_units")
+  currency          String         @default("KRW") @db.Char(3)
+  stockQuantity     Int            @default(0) @map("stock_quantity")
+  createdAt         DateTime       @default(now()) @map("created_at")
+  updatedAt         DateTime       @updatedAt @map("updated_at")
+  deletedAt         DateTime?      @map("deleted_at")
+  activities        UserActivity[]
+
+  @@index([deletedAt, createdAt])
+  @@map("products")
+}
+
 /// 사용자 활동 이벤트. activity-worker 가 SQS 메시지를 소비하여 이 테이블에 적재합니다.
 model UserActivity {
-  id           String   @id @default(uuid())
+  id           String    @id @default(uuid())
   /// 활동을 발생시킨 사용자 ID
-  userId       String   @map("user_id")
+  userId       String    @map("user_id")
   /// 활동 유형 (login, logout, view_product, add_to_cart ...)
-  activityType String   @map("activity_type")
+  activityType String    @map("activity_type")
+  /// 상품 관련 활동이 가리키는 상품 ID
+  productId    String?   @map("product_id")
+  product      Product?  @relation(fields: [productId], references: [id], onDelete: Restrict)
   /// 활동에 대한 추가 세부 정보(JSON)
   details      Json?
   /// 클라이언트가 보고한 활동 발생 시각
-  occurredAt   DateTime @map("occurred_at")
+  occurredAt   DateTime  @map("occurred_at")
   /// 레코드 적재 시각
-  createdAt    DateTime @default(now()) @map("created_at")
+  createdAt    DateTime  @default(now()) @map("created_at")
 
   @@index([userId])
   @@index([activityType])
+  @@index([productId, activityType, occurredAt])
+  @@index([userId, productId, occurredAt])
   @@map("user_activities")
 }

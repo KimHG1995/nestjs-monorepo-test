@@ -56,6 +56,30 @@ describe('ActivityWorkerService', () => {
     expect(mockSqs.deleteMessage).toHaveBeenCalledWith('rh-1');
   });
 
+  it('상품 활동의 productId를 DB에 적재한다', async () => {
+    const productMessage: Message = {
+      MessageId: 'msg-product-1',
+      ReceiptHandle: 'rh-product-1',
+      Body: JSON.stringify({
+        userId: '11111111-1111-1111-1111-111111111111',
+        activityType: 'purchase',
+        productId: '22222222-2222-2222-2222-222222222222',
+        timestamp: '2026-07-23T00:00:00.000Z',
+      }),
+    };
+    mockPrisma.userActivity.create.mockResolvedValue({
+      id: 'activity-product-1',
+    });
+
+    await service.processMessage(productMessage);
+
+    expect(mockPrisma.userActivity.create).toHaveBeenCalledWith({
+      data: expect.objectContaining({
+        productId: '22222222-2222-2222-2222-222222222222',
+      }),
+    });
+  });
+
   it('스키마에 맞지 않는 메시지는 적재하지 않고 폐기(삭제)한다', async () => {
     const badMessage: Message = {
       MessageId: 'msg-2',
