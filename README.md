@@ -1,46 +1,184 @@
-# NestJS 이벤트 기반 모노레포 프로젝트
+# NestJS 표준 통신 프로토콜 모노레포
 
-이 프로젝트는 NestJS를 사용하여 구축된 이벤트 기반 아키텍처의 모의(mock-up) 템플릿입니다. 사용자 활동을 API 서버에서 받아 SQS와 같은 메시지 큐로 전송하고, 별도의 워커가 이 메시지를 처리하는 구조를 가지고 있습니다.
+이 프로젝트는 NestJS 모노레포 위에서 **RFC 7807 기반의 정형화된 HTTP 통신 프로토콜**을 구현한 템플릿입니다.
+모든 API 는 하나의 일관된 파이프라인을 통해 **요청은 Zod 로 검증**하고, **성공 응답은 정형화된 구조**로,
+**실패 응답은 RFC 7807 `application/problem+json`** 으로 정형화하여 반환합니다.
+
+이벤트 기반(API → SQS → Worker → DB) 흐름과, 범용 HTTPS REST 서버를 함께 제공합니다.
 
 ## 주요 기술 스택
 
-- **프레임워크**: [NestJS](https://nestjs.com/) (Monorepo) + **SWC**
+- **프레임워크**: [NestJS](https://nestjs.com/) (Monorepo, **webpack 빌더**)
 - **언어**: [TypeScript](https://www.typescriptlang.org/)
+- **타입 검사**: [Go 네이티브 TypeScript (`tsgo`, TS 7)](https://www.npmjs.com/package/@typescript/native-preview) — 빠른 `--noEmit` 검사에 사용 (툴체인 컴파일러는 TS 5 유지)
+- **요청/응답 검증**: [Zod](https://zod.dev/) 및 `nestjs-zod`
+- **에러 규격**: [RFC 7807 — Problem Details for HTTP APIs](https://datatracker.ietf.org/doc/html/rfc7807)
+- **설정 관리**: `@nestjs/config` + Zod (타입 세이프 환경변수)
+- **로깅**: [pino](https://getpino.io/) (`nestjs-pino`, 요청 추적 ID 상관관계)
+- **데이터베이스**: [Prisma](https://www.prisma.io/) (PostgreSQL) + `prisma-erd-generator`
+- **메시지 큐**: [AWS SQS v3 SDK](https://aws.amazon.com/sqs/) (LocalStack 연동)
 - **API 문서화**: [Swagger (OpenAPI)](https://swagger.io/)
-- **데이터 유효성 검사**: [Zod](https://zod.dev/) 및 `nestjs-zod`
-- **메시지 큐 (가상)**: [AWS SQS v3 SDK](https://aws.amazon.com/sqs/) (LocalStack 연동을 가정)
-- **코드 스타일 및 품질**:
-  - **Linter**: [ESLint](https://eslint.org/) (Flat Config)
-  - **Formatter**: [Prettier](https://prettier.io/)
-  - **EditorConfig**: 일관된 편집기 설정
+- **코드 품질**: [ESLint](https://eslint.org/) (Flat Config) · [Prettier](https://prettier.io/)
+
+---
+
+## 표준 통신 프로토콜
+
+핵심은 [`libs/common-utils`](libs/common-utils) 의 `HttpProtocolModule` 하나로, 임포트하면 아래 3가지가 **전역**으로 활성화됩니다.
+
+| 구성요소                              | 역할                                              |
+| ------------------------------------- | ------------------------------------------------- |
+| `ZodValidationPipe` (요청)            | 모든 요청 DTO(`createZodDto`)를 Zod 스키마로 검증 |
+| `ResponseTransformInterceptor` (성공) | 정상 응답을 `{ success, data, meta }` 정형화      |
+| `AllExceptionsFilter` (실패)          | 모든 예외를 RFC 7807 `problem+json` 으로 정형화   |
+
+### 성공 응답 (정형화된 구조)
+
+```jsonc
+// 200/201
+{
+  "success": true,
+  "data": { "id": "…", "name": "위젯 A", "color": "red" },
+  "meta": {
+    "timestamp": "2026-07-23T00:00:00.000Z",
+    "path": "/widgets",
+    "traceId": "26229f8c-5697-4e72-b214-8f0aa039f083",
+  },
+}
+```
+
+> 헬스체크·파일 다운로드처럼 정형화된 응답이 불필요한 엔드포인트는 `@SkipResponseTransform()` 으로 제외할 수 있습니다.
+
+### 실패 응답 (RFC 7807)
+
+```jsonc
+// 404  ·  Content-Type: application/problem+json
+{
+  "type": "https://example.com/problems/not-found",
+  "title": "Not Found",
+  "status": 404,
+  "code": "NOT_FOUND",
+  "timestamp": "2026-07-23T00:00:00.000Z",
+  "detail": "위젯을 찾을 수 없습니다: …",
+  "instance": "/widgets/…",
+  "traceId": "fc0263b6-96eb-45b8-8ce4-a40bee23b6ea",
+}
+```
+
+### 검증 에러 (Zod → RFC 7807)
+
+요청 검증 실패는 `errors[]` 확장 멤버(RFC 7807 §3.2)로 **필드별 사유**까지 정형화됩니다.
+
+```jsonc
+// 400  ·  Content-Type: application/problem+json
+{
+  "type": "https://example.com/problems/bad-request",
+  "title": "Bad Request",
+  "status": 400,
+  "code": "VALIDATION_FAILED",
+  "detail": "요청 데이터가 유효성 검증을 통과하지 못했습니다.",
+  "instance": "/widgets",
+  "traceId": "…",
+  "errors": [
+    {
+      "name": "name",
+      "reason": "이름은 최소 1자 이상이어야 합니다.",
+      "code": "too_small",
+    },
+    {
+      "name": "color",
+      "reason": "color 는 red, green, blue 중 하나여야 합니다.",
+      "code": "invalid_enum_value",
+    },
+  ],
+}
+```
+
+> `traceId` 는 성공 응답의 `meta.traceId`, 에러 응답의 `traceId`, 그리고 로그가 모두 공유하는 값으로
+> 응답 헤더 `x-request-id` 로도 반환되어 요청·응답·로그를 한 번에 추적할 수 있습니다.
+
+---
+
+## 요청 처리 파이프라인 (Guard → Interceptor → Pipe → Controller → Filter)
+
+하나의 HTTP 요청이 들어와 응답이 나가기까지 NestJS 가 구성요소를 실행하는 순서와,
+각 단계에서 이 프로젝트가 무엇을 하는지 정리한 흐름입니다.
+
+```mermaid
+flowchart TD
+    A["HTTP 요청"] --> MW["① 미들웨어 Middleware<br/>nestjs-pino · pino-http<br/>x-request-id / traceId 부여"]
+    MW --> G{"② 가드 Guards<br/>인증 · 인가"}
+    G -- "거부" --> EX(("예외 발생"))
+    G -- "통과" --> IPRE["③ 인터셉터 (전처리)<br/>ResponseTransformInterceptor<br/>traceId 확인 · Skip 여부 판별"]
+    IPRE --> P["④ 파이프 Pipes<br/>ZodValidationPipe<br/>요청 DTO 를 Zod 로 검증"]
+    P -- "검증 실패" --> EX
+    P -- "검증 성공" --> C["⑤ 컨트롤러 → 서비스<br/>비즈니스 로직 수행"]
+    C -- "예외 throw" --> EX
+    C -- "정상 반환" --> IPOST["⑥ 인터셉터 (후처리)<br/>ResponseTransformInterceptor<br/>success · data · meta 로 정형화"]
+    IPOST --> OK["200 / 201 응답<br/>application/json"]
+    EX --> F["⑦ 예외 필터 Exception Filter<br/>AllExceptionsFilter<br/>RFC 7807 로 정형화"]
+    F --> ERR["4xx / 5xx 응답<br/>application/problem+json"]
+```
+
+> 핵심 규칙 — **정상 응답은 인터셉터가, 모든 실패 응답은 예외 필터가** 각각 단독으로 정형화합니다.
+> 어느 단계(가드·파이프·컨트롤러)에서 예외가 발생하든 결국 `AllExceptionsFilter` 한 곳으로 모입니다.
+
+### 현재 등록된 구성요소
+
+세 가지 전역 구성요소(파이프·인터셉터·필터)는 모두
+[`HttpProtocolModule`](libs/common-utils/src/http-protocol.module.ts) 이
+`APP_PIPE` · `APP_INTERCEPTOR` · `APP_FILTER` 토큰으로 한 번에 등록합니다.
+각 앱은 이 모듈만 `imports` 하면 동일한 파이프라인을 그대로 사용합니다.
+
+| 유형      | 이름                           | 스코프                 | 위치                                                                                 | 역할                                                                                 |
+| --------- | ------------------------------ | ---------------------- | ------------------------------------------------------------------------------------ | ------------------------------------------------------------------------------------ |
+| 미들웨어  | `pino-http`                    | 전역                   | [libs/logger](libs/logger/src/logger.module.ts)                                      | 요청 로깅, `x-request-id`(traceId) 부여·응답 헤더 반환                               |
+| 가드      | _(현재 커스텀 가드 없음)_      | —                      | —                                                                                    | 인증·인가 확장 지점. 필요 시 `@UseGuards()` 또는 `APP_GUARD` 로 추가                 |
+| 인터셉터  | `ResponseTransformInterceptor` | 전역 `APP_INTERCEPTOR` | [common-utils](libs/common-utils/src/interceptors/response-transform.interceptor.ts) | 정상 응답을 `{ success, data, meta }` 로 정형화 (`@SkipResponseTransform()` 은 제외) |
+| 파이프    | `ZodValidationPipe`            | 전역 `APP_PIPE`        | `nestjs-zod`                                                                         | `createZodDto` 요청을 Zod 스키마로 검증                                              |
+| 예외 필터 | `AllExceptionsFilter`          | 전역 `APP_FILTER`      | [common-utils](libs/common-utils/src/filters/all-exceptions.filter.ts)               | 모든 예외를 RFC 7807 `problem+json` 으로 정형화                                      |
+
+> 참고: 현재 요청 검증은 **가드가 아니라 전역 파이프(`ZodValidationPipe`)** 로 수행합니다.
+> (`nestjs-zod` 의 `UseZodGuard` 를 쓰지 않고 파이프로 일원화)
+
+### 아웃풋 정리
+
+- **정상 경로** — `③ 인터셉터(전처리)` → `④ 검증` → `⑤ 핸들러` → `⑥ 인터셉터(후처리)`
+  - 결과: `200/201` · `application/json` · `{ success, data, meta }` (위 _성공 응답_ 예시 참고)
+  - `@SkipResponseTransform()` 이 붙은 핸들러(예: `GET /health`)는 정형화 없이 원본을 그대로 반환합니다.
+- **실패 경로** — 어느 단계에서든 예외 발생 → `⑦ AllExceptionsFilter` 로 집결
+  - `ZodValidationException` → `400` · `code: VALIDATION_FAILED` · `errors[]`(필드별 사유)
+  - `HttpException`(예: `NotFoundException`) → 해당 상태코드 · `title` · `code` · `detail`
+  - 그 외 예외 → `500` (운영 환경에서는 `detail` 을 숨김)
+  - 공통: `Content-Type: application/problem+json`, `traceId` 포함 (위 _실패 응답_ 예시 참고)
 
 ---
 
 ## 프로젝트 구조
 
-이 프로젝트는 NestJS의 모노레포 모드를 사용하여 구성되었습니다.
-
 ```
 /
 ├── apps/
-│   ├── api-server/       # 외부 요청을 받는 API 서버 (이벤트 발행자)
-│   └── activity-worker/  # SQS 메시지를 처리하는 워커 (이벤트 소비자)
+│   ├── api-server/       # 활동을 받아 SQS 로 발행하는 API 서버 (이벤트 발행자)
+│   ├── activity-worker/  # SQS 를 폴링해 DB 에 적재하는 워커 (이벤트 소비자)
+│   └── web-server/       # 표준 프로토콜을 보여주는 범용 HTTPS REST 서버
 ├── libs/
-│   ├── common-utils/     # 전역 필터, 인터셉터 등 공용 유틸리티
-│   └── sqs-client/       # SQS 통신을 위한 공용 라이브러리
-├── .vscode/              # VSCode 워크스페이스 설정
-└── ...
+│   ├── common-utils/     # ★ 표준 통신 프로토콜 (RFC7807 필터·응답·검증 파이프)
+│   ├── config/           # Zod 기반 타입 세이프 환경변수 모듈
+│   ├── logger/           # pino 구조화 로깅 (요청 추적 ID)
+│   ├── prisma-client/    # Prisma 스키마·클라이언트·ERD 자동생성
+│   └── sqs-client/       # SQS 송/수신 공용 라이브러리
+├── .github/workflows/    # CI/CD (수동 트리거 전용 — 자동 실행 안 됨)
+├── docker/               # LocalStack 초기화 스크립트
+├── Dockerfile            # APP 빌드 인자로 앱별 이미지 빌드
+└── docker-compose.yml    # 로컬 인프라: LocalStack(SQS) + PostgreSQL
 ```
 
 ### 애플리케이션
 
-- **`api-server`**: 사용자의 활동(예: 로그인, 상품 조회)을 HTTP 요청으로 받아 SQS 큐에 기록합니다. Zod를 통해 요청 데이터의 유효성을 검사하며, Swagger를 통해 API 문서를 제공합니다.
-- **`activity-worker`**: SQS 큐를 주기적으로 폴링하여 메시지를 수신하고, 수신된 메시지를 처리하는 백그라운드 워커입니다. (현재는 콘솔에 로그 출력)
-
-### 라이브러리
-
-- **`common-utils`**: 전역 예외 필터(RFC 7807 표준)와 응답 정형화 인터셉터를 제공하여 API의 일관성을 유지합니다.
-- **`sqs-client`**: AWS SQS v3 SDK를 사용하여 메시지 송/수신 로직을 캡슐화한 공용 라이브러리입니다.
+- **`api-server`** (기본 포트 3000): 사용자 활동을 HTTP 로 받아 SQS FIFO 큐로 발행합니다. 표준 프로토콜 적용.
+- **`activity-worker`**: SQS 를 롱 폴링하여 메시지를 Zod 로 재검증한 뒤 **Prisma 로 DB 에 적재**합니다. (HTTP 서버 없음)
+- **`web-server`** (기본 포트 3002): SQS 와 무관한 범용 REST 서버. 위젯(Widget) 리소스 CRUD 로 표준 프로토콜을 시연하며, 설정으로 **HTTPS** 를 켤 수 있습니다.
 
 ---
 
@@ -48,70 +186,162 @@
 
 ### 사전 준비
 
-- [Node.js](https://nodejs.org/en/) (v18 이상 권장)
-- [npm](https://www.npmjs.com/)
-- (선택) [Docker](https://www.docker.com/) 및 [LocalStack](https://localstack.cloud/) - 실제 SQS 연동 테스트 시 필요
+- **[Node.js](https://nodejs.org/en/) 24 LTS** — 버전이 [`.nvmrc`](.nvmrc) / [`.node-version`](.node-version) / [`.mise.toml`](.mise.toml) 에 고정되어 있고, `package.json` 의 `engines` + `.npmrc` 의 `engine-strict` 로 **강제**됩니다. (24 미만에서는 설치가 거부됩니다.)
+- [Docker](https://www.docker.com/) (LocalStack + PostgreSQL 로컬 인프라용)
+
+> 버전 관리자(mise/nvm/fnm 등)를 쓰면 디렉터리 진입 시 자동으로 맞춰집니다.
+>
+> ```bash
+> mise install && mise use   # mise
+> nvm install && nvm use     # nvm (.nvmrc 사용)
+> ```
 
 ### 1. 의존성 설치
 
 ```bash
-npm install
+npm install   # postinstall: Prisma Client 생성 · prepare: husky 훅 설치
 ```
 
-### 2. 애플리케이션 실행
-
-**터미널 1: `api-server` 실행**
+### 2. 환경변수 준비
 
 ```bash
-npm run start:dev api-server
+cp .env.example .env
 ```
 
-**터미널 2: `activity-worker` 실행**
+### 3. 로컬 인프라 기동 (SQS + DB)
 
 ```bash
-npm run start:dev activity-worker
+npm run docker:up          # LocalStack(SQS FIFO 큐 자동 생성) + PostgreSQL
+npm run prisma:migrate     # DB 스키마 생성 (activity-worker 용)
 ```
 
-### 3. E2E 테스트 실행
+### 4. 애플리케이션 실행
 
 ```bash
-npm run test:e2e -- --config apps/api-server/test/jest-e2e.json
+npm run start:dev web-server       # 범용 REST 서버   (http://localhost:3002)
+npm run start:dev api-server       # 이벤트 발행 API  (http://localhost:3000)
+npm run start:dev activity-worker  # SQS 소비 워커
+```
+
+Swagger UI: `http://localhost:3002/api-docs`, `http://localhost:3000/api-docs`
+
+### 5. 빠른 확인
+
+```bash
+# 성공 응답
+curl -s http://localhost:3002/widgets -X POST \
+  -H 'Content-Type: application/json' \
+  -d '{"name":"위젯 A","color":"red","quantity":3}'
+
+# 검증 에러 (RFC 7807)
+curl -s http://localhost:3002/widgets -X POST \
+  -H 'Content-Type: application/json' \
+  -d '{"name":"","color":"purple"}'
+```
+
+### HTTPS 로 실행하기 (web-server)
+
+```bash
+# 개발용 자체 서명 인증서 생성
+mkdir -p certs
+openssl req -x509 -newkey rsa:2048 -nodes -keyout certs/key.pem -out certs/cert.pem -days 365 -subj "/CN=localhost"
+
+# .env 설정
+# HTTPS_ENABLED=true
+# HTTPS_KEY_PATH=./certs/key.pem
+# HTTPS_CERT_PATH=./certs/cert.pem
 ```
 
 ---
 
 ## 개발 환경
 
-이 프로젝트는 일관된 개발 환경을 위해 몇 가지 도구와 설정을 포함하고 있습니다.
+### 빌드 · 품질 · 테스트
 
-### 코드 스타일 및 품질
+```bash
+npm run build:all   # 세 앱을 webpack 으로 각각 자체 완결형 번들로 빌드
+npm run lint        # ESLint (--fix) — import 정렬 포함
+npm run typecheck   # Go 네이티브 TypeScript(tsgo) 로 --noEmit 타입 검사
+npm run format      # Prettier
+npm test            # 단위 테스트
+npm run test:e2e    # api-server e2e
+npx jest --config apps/web-server/test/jest-e2e.json   # web-server e2e
+```
 
-- **포매팅**: `npm run format`
-- **린팅**: `npm run lint`
+> `typecheck` 는 [tsconfig.typecheck.json](tsconfig.typecheck.json)(TS 7 호환) 을 사용합니다.
+> TS 7 은 `baseUrl` 을 제거했기 때문에, 기존 툴체인(webpack·ts-jest·ESLint, TS 5)이 쓰는
+> [tsconfig.json](tsconfig.json) 과 분리해 두었습니다. 필요 시 `npm run typecheck:tsc` 로 클래식 검사도 가능합니다.
 
-### 추천 VSCode 확장 프로그램
+### Git 훅 (커밋 검증) — husky + lint-staged
 
-- **EditorConfig for VS Code** (`EditorConfig.EditorConfig`)
-- **ESLint** (`dbaeumer.vscode-eslint`)
-- **Prettier - Code formatter** (`esbenp.prettier-vscode`)
+커밋할 때마다 아래가 **자동으로 강제 실행**되며, 하나라도 실패하면 커밋이 중단됩니다.
+설정은 `npm install` 시 `prepare` 스크립트가 husky 훅을 자동으로 설치합니다.
+
+1. **스테이징된 파일**에 ESLint(`--fix`) + Prettier(`--write`) 적용 → 수정분 자동 재스테이징 ([lint-staged](package.json) 설정)
+2. **타입 검사** — `npm run typecheck` (Go 네이티브 `tsgo --noEmit`, 프로젝트 전체)
+3. **단위 테스트** — `npm test`
+
+훅 정의: [.husky/pre-commit](.husky/pre-commit)
+
+### import 정렬 규칙
+
+ESLint(`import/order` + `sort-imports`)가 아래 순서로 **자동 정렬**합니다. (`npm run lint` / 커밋 훅에서 적용)
+
+1. Node 내장 모듈 (`crypto`, `fs` …)
+2. 외부 패키지 (`@nestjs/*`, `zod` …)
+3. 내부 라이브러리 (`@app/*`)
+4. 상대 경로 (`./`, `../`)
+
+각 그룹 사이는 빈 줄로 구분하고, **그룹 내부와 `{ … }` 멤버는 이름 A-Z** 로 정렬합니다.
+
+### 데이터베이스 (Prisma)
+
+```bash
+npm run prisma:generate   # 클라이언트 + ERD 생성
+npm run prisma:migrate    # 마이그레이션
+npm run prisma:erd        # ERD 만 재생성 → libs/prisma-client/ERD.md
+npm run prisma:studio     # Prisma Studio
+```
+
+> 스키마([libs/prisma-client/prisma/schema.prisma](libs/prisma-client/prisma/schema.prisma))가 바뀌면
+> `prisma-erd-generator` 가 [libs/prisma-client/ERD.md](libs/prisma-client/ERD.md) 를 mermaid 다이어그램으로 자동 갱신합니다.
+
+### Docker 이미지 빌드
+
+```bash
+docker build --build-arg APP=web-server -t web-server .
+docker build --build-arg APP=api-server -t api-server .
+docker build --build-arg APP=activity-worker -t activity-worker .
+```
+
+### CI/CD
+
+`.github/workflows` 의 워크플로우는 **실수로 자동 실행되지 않도록 수동 트리거(`workflow_dispatch`)로만** 설정되어 있습니다.
+
+- **[ci.yml](.github/workflows/ci.yml)**: 설치 → Prisma 생성 → Lint → Build → 테스트. push/PR 자동화는 주석 해제로 활성화.
+- **[cd.yml](.github/workflows/cd.yml)**: ECR 이미지 빌드/푸시 + ECS 배포 템플릿. 리포지토리 변수 `ENABLE_CD == 'true'` 일 때만 실제로 동작하는 안전장치 포함.
 
 ---
 
+## 완료된 개선 항목
+
+- [x] **표준 통신 프로토콜** — RFC 7807 에러 + 성공 응답 + Zod 검증을 하나의 일관된 파이프라인(`HttpProtocolModule`)으로 제공
+- [x] **범용 HTTPS 웹 서버** — `web-server` 앱 추가
+- [x] **데이터베이스 연동 (Prisma)** — `prisma-client` 라이브러리 추가, `activity-worker` 가 활동을 DB 에 적재
+- [x] **ERD 자동 생성** — `prisma-erd-generator` 로 스키마 변경 시 ERD 갱신
+- [x] **설정 관리 (ConfigModule)** — `@nestjs/config` + Zod 로 환경변수 타입 세이프 검증(부팅 시 fail-fast)
+- [x] **로깅 시스템** — `pino` 구조화 로깅, 요청 추적 ID(`x-request-id`) 상관관계
+- [x] **CI/CD 파이프라인 (템플릿)** — GitHub Actions (자동 실행되지 않는 수동 트리거)
+- [x] **Node 버전 고정** — 최신 LTS(24) 를 mise/nvm + `engines`/`engine-strict` 로 강제
+- [x] **커밋 게이트** — husky + lint-staged 로 커밋 시 Lint·Prettier·타입검사(tsgo)·테스트 강제
+- [x] **Go 네이티브 타입 검사** — `tsgo`(TS 7) 로 `--noEmit` 검사
+- [x] **AI 코드 리뷰 스펙** — [.coderabbit.yaml](.coderabbit.yaml) 로 CodeRabbit 리뷰 규칙 정형화
+
 ## 향후 개선 계획 (TODO)
 
-- [ ] **데이터베이스 연동 (Prisma)**
-  - `libs`에 `prisma-client` 라이브러리(서브모듈)를 추가하여 데이터베이스 스키마 및 클라이언트를 중앙에서 관리합니다.
-  - `activity-worker`가 SQS 메시지를 받아 실제 데이터베이스에 사용자 활동을 기록하도록 로직을 수정합니다.
-
-- [ ] **ERD (Entity-Relationship Diagram) 자동 생성**
-  - Prisma 스키마가 변경될 때마다 `prisma-erd-generator`와 같은 도구를 사용하여 ERD를 자동으로 업데이트하는 워크플로우를 구축합니다.
-
-- [ ] **CI/CD 파이프라인 구축**
-  - **CI (Continuous Integration)**: GitHub Actions를 사용하여 Pull Request 생성 시 자동으로 빌드, 린트, 테스트를 실행합니다.
-  - **CD (Continuous Deployment)**: Main 브랜치에 머지될 때, Docker 이미지를 빌드하여 Amazon ECR에 푸시하고, ECS 또는 EKS에 자동으로 배포하는 파이프라인을 구축합니다.
-
-- [ ] **설정 관리 (ConfigModule)**
-  - NestJS의 `ConfigModule`을 도입하여 환경 변수(`.env`)를 타입 세이프하게 관리하고, 각 애플리케이션에 주입합니다.
-
-- [ ] **로깅 시스템 개선**
-  - `winston`이나 `pino` 같은 로깅 라이브러리를 도입하여 로그 레벨 관리, 로그 포맷 통일, 파일 로깅 등을 구현합니다.
+- [ ] **TypeScript 7 전면 전환** — `typescript-eslint` 와 `ts-jest` 가 TS 7 을 지원하면(현재 각각 peer `<6.1.0`, `<7`) `typescript` 패키지째 7 로 승격하고 `tsconfig.typecheck.json` 을 `tsconfig.json` 으로 통합
+- [ ] **`ttsc`(ttypescript) / `ts-patch` 도입 검토** — 커스텀 컴파일러 트랜스포머(예: 자동 DI 메타데이터, 배럴 최적화)가 필요해질 경우 `tsc` 대체 검토
+- [ ] **CodeRabbit 활성화** — 리포지토리에 [CodeRabbit](https://coderabbit.ai) GitHub 앱을 설치하면 [.coderabbit.yaml](.coderabbit.yaml) 규칙대로 PR 자동 리뷰가 시작됨
+- [ ] **CD 실배포 연결** — ECR/ECS 리소스 프로비저닝 및 GitHub Secrets/Variables 구성 후 `ENABLE_CD` 활성화
+- [ ] **Dead Letter Queue (DLQ)** — 반복 실패 메시지 격리
+- [ ] **관측성 강화** — 헬스체크(`@nestjs/terminus`), 메트릭(OpenTelemetry) 도입
