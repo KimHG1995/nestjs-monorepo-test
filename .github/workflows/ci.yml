@@ -1,0 +1,59 @@
+# ────────────────────────────────────────────────────────────────────────────
+# CI (Continuous Integration)
+#
+# ⚠️ 이 워크플로우는 "직접(자동) 동작하지 않도록" 수동 트리거(workflow_dispatch)로만
+#    설정되어 있습니다. push / pull_request 시 자동 실행하려면 아래 주석을 해제하세요.
+# ────────────────────────────────────────────────────────────────────────────
+name: CI
+
+on:
+  workflow_dispatch: {}
+  # 자동 실행을 원하면 아래 주석을 해제하세요.
+  # push:
+  #   branches: [main]
+  # pull_request:
+  #   branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  verify:
+    name: Lint · Build · Test
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          # .nvmrc 에 고정된 Node 버전(최신 LTS)을 그대로 사용합니다.
+          node-version-file: '.nvmrc'
+          cache: npm
+
+      # postinstall 이 Prisma Client 를 생성합니다. (DB 연결 불필요)
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Generate Prisma Client & ERD
+        run: npm run prisma:generate
+
+      - name: Lint
+        run: npm run lint
+
+      - name: Type check (tsgo · native TS 7)
+        run: npm run typecheck
+
+      - name: Build (all apps)
+        run: npm run build:all
+
+      - name: Unit tests
+        run: npm test
+
+      - name: E2E tests (api-server)
+        run: npm run test:e2e
+
+      - name: E2E tests (web-server)
+        run: npm run test -- --config apps/web-server/test/jest-e2e.json

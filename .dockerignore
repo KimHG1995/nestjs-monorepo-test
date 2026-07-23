@@ -1,0 +1,17 @@
+node_modules
+dist
+build
+coverage
+.git
+.github
+.vscode
+.idea
+**/*.spec.ts
+**/*.e2e-spec.ts
+.env
+.env.*
+!.env.example
+npm-debug.log*
+Dockerfile
+.dockerignore
+README.md
