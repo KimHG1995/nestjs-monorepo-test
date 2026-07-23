@@ -3,20 +3,16 @@ import { Module } from '@nestjs/common';
 import { HttpProtocolModule } from '@app/common-utils';
 import { TypedConfigModule } from '@app/config';
 import { AppLoggerModule } from '@app/logger';
-import { SqsClientModule } from '@app/sqs-client';
 
-import { ApiServerController } from './api-server.controller';
-import { ApiServerService } from './api-server.service';
 import { apiServerEnvSchema } from './config/env';
+import { ActivityModule } from './modules/activity/activity.module';
 
 @Module({
   imports: [
     TypedConfigModule.forRoot(apiServerEnvSchema),
     AppLoggerModule.forRoot(),
     HttpProtocolModule,
-    SqsClientModule,
+    ActivityModule,
   ],
-  controllers: [ApiServerController],
-  providers: [ApiServerService],
 })
 export class ApiServerModule {}

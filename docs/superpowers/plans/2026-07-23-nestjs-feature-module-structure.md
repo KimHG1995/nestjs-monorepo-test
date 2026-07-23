@@ -39,7 +39,7 @@
 - Consumes: `SqsClientModule`, `SqsClientService`, `ActivityEventSchema`.
 - Preserves: `POST /activity/track`.
 
-- [ ] **Step 1: Move the DTO into the activity feature**
+- [x] **Step 1: Move the DTO into the activity feature**
 
 Move the existing DTO without changing its schema:
 
@@ -51,7 +51,7 @@ import { ActivityEventSchema } from '@app/common-utils';
 export class TrackActivityDto extends createZodDto(ActivityEventSchema) {}
 ```
 
-- [ ] **Step 2: Rename and move the controller**
+- [x] **Step 2: Rename and move the controller**
 
 Create `activity.controller.ts` from the existing controller and use domain names:
 
@@ -83,7 +83,7 @@ export class ActivityController {
 }
 ```
 
-- [ ] **Step 3: Rename and move the service**
+- [x] **Step 3: Rename and move the service**
 
 Create `activity.service.ts` from the existing service:
 
@@ -113,7 +113,7 @@ export class ActivityService {
 
 The existing `console.log` is removed because application logging is already provided by `AppLoggerModule`; request payloads should not be written directly to stdout.
 
-- [ ] **Step 4: Add the feature module and simplify the root module**
+- [x] **Step 4: Add the feature module and simplify the root module**
 
 Create `activity.module.ts`:
 
@@ -135,7 +135,7 @@ export class ActivityModule {}
 
 Update `ApiServerModule` so it imports `ActivityModule` and no longer directly registers the controller, service, or `SqsClientModule`.
 
-- [ ] **Step 5: Move and update the controller unit test**
+- [x] **Step 5: Move and update the controller unit test**
 
 Move the test next to `ActivityController` and replace:
 
@@ -147,7 +147,7 @@ ApiServerService → ActivityService
 
 Keep both existing assertions for account and product activity events.
 
-- [ ] **Step 6: Verify the API Server feature**
+- [x] **Step 6: Verify the API Server feature**
 
 Run:
 

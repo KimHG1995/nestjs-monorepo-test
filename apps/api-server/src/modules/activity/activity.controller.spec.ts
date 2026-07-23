@@ -2,24 +2,24 @@ import { Test, TestingModule } from '@nestjs/testing';
 
 import { SqsClientService } from '@app/sqs-client';
 
-import { ApiServerController } from './api-server.controller';
-import { ApiServerService } from './api-server.service';
-import { TrackActivityDto } from './track-activity.dto';
+import { ActivityController } from './activity.controller';
+import { ActivityService } from './activity.service';
+import { TrackActivityDto } from './dto/track-activity.dto';
 
-describe('ApiServerController', () => {
-  let controller: ApiServerController;
+describe('ActivityController', () => {
+  let controller: ActivityController;
   const mockSqs = { sendMessage: jest.fn() };
 
   beforeEach(async () => {
     const moduleRef: TestingModule = await Test.createTestingModule({
-      controllers: [ApiServerController],
+      controllers: [ActivityController],
       providers: [
-        ApiServerService,
+        ActivityService,
         { provide: SqsClientService, useValue: mockSqs },
       ],
     }).compile();
 
-    controller = moduleRef.get<ApiServerController>(ApiServerController);
+    controller = moduleRef.get<ActivityController>(ActivityController);
     mockSqs.sendMessage.mockReset();
   });
 
