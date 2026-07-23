@@ -425,7 +425,7 @@ mise exec -- npm run typecheck:tsc
 
 Expected: worker tests pass and both type checks exit 0.
 
-- [ ] **Step 7: Commit**
+- [x] **Step 7: Commit**
 
 ```bash
 git add \
@@ -457,7 +457,7 @@ git commit -m "feat(prisma): add product activity schema"
 - Produces: REST endpoints under `/products`.
 - Produces later: analytics uses the product model directly, not `ProductsService`, so deleted products remain analyzable.
 
-- [ ] **Step 1: Write failing product service tests**
+- [x] **Step 1: Write failing product service tests**
 
 Create `apps/web-server/src/products/products.service.spec.ts`:
 
@@ -552,7 +552,7 @@ describe('ProductsService', () => {
 });
 ```
 
-- [ ] **Step 2: Run product tests and confirm RED**
+- [x] **Step 2: Run product tests and confirm RED**
 
 Run:
 
@@ -562,7 +562,7 @@ mise exec -- npx jest apps/web-server/src/products/products.service.spec.ts --ru
 
 Expected: FAIL because `ProductsService` does not exist.
 
-- [ ] **Step 3: Add product DTO schemas**
+- [x] **Step 3: Add product DTO schemas**
 
 Create `create-product.dto.ts`:
 
@@ -615,7 +615,7 @@ export class ListProductsQueryDto extends createZodDto(
 ) {}
 ```
 
-- [ ] **Step 4: Implement `ProductsService`**
+- [x] **Step 4: Implement `ProductsService`**
 
 Create `products.service.ts`:
 
@@ -652,9 +652,11 @@ export class ProductsService {
     try {
       return await this.prisma.product.create({
         data: {
-          ...dto,
           sku: dto.sku.trim().toUpperCase(),
+          name: dto.name,
+          priceInMinorUnits: dto.priceInMinorUnits,
           currency: dto.currency.trim().toUpperCase(),
+          stockQuantity: dto.stockQuantity,
         },
       });
     } catch (error) {
@@ -731,7 +733,7 @@ export class ProductsService {
 }
 ```
 
-- [ ] **Step 5: Implement controller and module**
+- [x] **Step 5: Implement controller and module**
 
 Create `products.controller.ts`:
 
@@ -810,7 +812,7 @@ import { ProductsService } from './products.service';
 export class ProductsModule {}
 ```
 
-- [ ] **Step 6: Verify product API unit tests**
+- [x] **Step 6: Verify product API unit tests**
 
 Run:
 
