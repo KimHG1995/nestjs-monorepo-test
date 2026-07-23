@@ -10,8 +10,9 @@ WORKDIR /app
 # Docker 빌드 컨텍스트에는 .git 이 없으므로 husky(prepare 훅) 설치를 건너뜁니다.
 ENV HUSKY=0
 
-# 의존성 설치 (postinstall 의 prisma generate 를 위해 스키마를 먼저 복사)
+# 의존성 설치 (postinstall 의 prisma generate 를 위해 설정과 스키마를 먼저 복사)
 COPY package*.json ./
+COPY prisma.config.ts ./
 COPY libs/prisma-client/prisma ./libs/prisma-client/prisma
 RUN npm ci
 
@@ -30,7 +31,6 @@ COPY package*.json ./
 RUN npm ci --omit=dev --ignore-scripts && npm cache clean --force
 
 COPY --from=builder /app/dist ./dist
-COPY --from=builder /app/node_modules/.prisma ./node_modules/.prisma
 
 # 헬스체크/실행 대상 앱 이름을 런타임 환경변수로 전달
 ARG APP

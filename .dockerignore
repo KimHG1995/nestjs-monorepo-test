@@ -1,4 +1,5 @@
 node_modules
+libs/prisma-client/generated
 dist
 build
 coverage
